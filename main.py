@@ -207,6 +207,10 @@ class Game():
         print("---------------")
         print("Guten Tag,", self.rank[self.rankMod], "- The date is", self.getFullDate())
         self.currentOrders = ""
+        self.patrol = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
+                  "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth",
+                  "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third", "twenty-fourth"]
+        self.patrolNum = 1
         self.currentLocationStep = 0
         self.onStationSteps = self.sub.patrol_length
         self.gameloop()
@@ -283,7 +287,7 @@ class Game():
         else:
             self.getPatrol(self.date_month,self.date_year,d6Roll(),self.sub.getType())
         print("Patrol Assignment:", self.currentOrders)
-        depart = "U-" + self.id + " departs port early before dawn for your patrol."
+        depart = "U-" + self.id + " departs port early before dawn for" + self.rank + " " + self.kmdt + "'s " + self.patrol[self.patrolNum]
         print(depart)
         self.currentLocationStep = 1
 
