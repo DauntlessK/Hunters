@@ -211,6 +211,7 @@ class Game():
                   "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth",
                   "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third", "twenty-fourth"]
         self.patrolNum = 1
+        self.randomEvent = False
         self.currentLocationStep = 0
         self.onStationSteps = self.sub.patrol_length
         self.gameloop()
@@ -319,15 +320,84 @@ class Game():
 
     def gameloop(self):
         self.startPatrol()
-        getEncounter(getLocation(self.currentOrders,self.currentLocationStep,self.onStationSteps))
+        getEncounter(getLocation(self.currentOrders,self.currentLocationStep,self.onStationSteps), self.randomEvent)
 
 
 def gameover():
     print("GAMEOVER!")
 
-def getEncounter(loc):
+def getEncounter(loc,randomEvent):
     roll = d6Rollx2()
     print("Roll for location", loc, "-", roll)
+    if roll == 12 and randomEvent == False:                 #First check if random event (natural 12)
+        return "Random Event"
+    match loc:
+        case "Transit":                                     #Transit encounter chart
+            match roll:
+                case 2 | 3:
+                    return "Aircraft"
+                case 12:
+                    return "Ship"
+                case _:
+                    return "-"
+        case "Arctic":                                      #Artic encounter chart
+            match roll:
+                case 2:
+                    return "Capital Ship"
+                case 3:
+                    return "Ship"
+                case 6 | 7 | 8:
+                    return "Convoy"
+                case 12:
+                    return "Aircraft"
+                case _:
+                    return "-"
+        case "Atlantic":                                    #Atlantic encounter chart
+            if roll == 2:
+                return "Capital Ship"
+            elif roll == 3:
+                return "Ship"
+            elif roll == 6 or roll == 7 or roll == 9 or roll == 12:
+                return "Convoy"
+            else:
+                return "-"
+        case "British Isles":                               #British Isles encounter chart
+            if roll == 2:
+                return "Capital Ship"
+            elif roll == 5 or roll == 8:
+                return "Ship"
+            elif roll == 6:
+                return "Ship + Escort"
+            elif roll == 10:
+                return "Convoy"
+            elif roll == 12:
+                return "Aircraft"
+            else:
+                return "-"
+        case "Caribbean":                                    # Carribean encounter chart
+            if roll == 2 or roll == 12:
+                return "Aircraft"
+            elif roll == 4 or roll == 8:
+                return "Ship"
+            elif roll == 6:
+                return "Two Ships + Escort"
+            elif roll == 9 or roll == 10:
+                return "Tanker"
+            else:
+                return "-"
+        case "Mediterranean":                                # Mediterranean encounter chart
+            if roll <= 3 or roll >= 11:
+                return "Aircraft"
+            elif roll == 4:
+                return "Capital Ship"
+            elif roll == 7:
+                return "Ship"
+            elif roll == 8:
+                return "Convoy"
+            elif roll == 10:
+                return "Two Ships + Escort"
+            else:
+                return "-"
 
 def getLocation(patrol,step,onStationLeft):
     """Gets current location box to determine encounter (transit, Atlantic, etc)"""
@@ -353,5 +423,8 @@ def getLocation(patrol,step,onStationLeft):
 
 
 
-Game()
+#Game()
 #getPatrol(9,1940,9, "IXA")
+
+test = getEncounter("Arctic",False)
+print(test)
