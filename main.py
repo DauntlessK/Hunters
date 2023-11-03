@@ -1,6 +1,7 @@
 #Kyle Breen-Bondie - Hunters: Uboat Board Game Recreation
 import random
 import os
+import time
 
 class Submarine():
     """Player's Submarine"""
@@ -21,7 +22,7 @@ class Submarine():
                 self.deck_gun_ammo = 10             # current ammo for deck gun
                 self.deck_gun_cap = 10              # sub's deck gun ammo capacity
                 self.reserves_aft = 0               # number of aft torpedo roloads
-            case "VIIB":
+            case "VIIB" | "VIIC":
                 self.patrol_length = 4              # number of spaces during patrols
                 self.hull_hp = 8                    # total hull damage before sinking
                 self.flooding_hp = 8                # total flooding damage before surfacing
@@ -57,7 +58,8 @@ class Submarine():
                 self.deck_gun_ammo = 5              # current ammo for deck gun
                 self.deck_gun_cap = 5               # sub's deck gun ammo capacity
                 self.reserves_aft = 2               # number of aft torpedo reloads
-            #TODO VIIC, VIID, VIIC Flak
+
+            #TODO VIID, VIIC Flak
 
 
         self.hull_Damage = 0  # current amount of hull damage
@@ -107,6 +109,7 @@ class Submarine():
         return self.subClass
 
     def torpedoResupply(self):
+        #TODO Resupply for minelaying missions (remove tubes and replace with mines)
         print("Submarine Resupply - You are given ", self.G7a, "(steam) and ", self.G7e, "(electric) torpedoes.")
         print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
         SA = -1
@@ -172,27 +175,32 @@ class Submarine():
         else:
             return False
 
+class Ship():
+    type = ""   #small freighter, large freighter, tanker, warship or capital ship
+    hp = 0
+    damage = 0
+    name = ""
+    GRT = 0
+    sunk = False
+
+    def __init__(self, type):
+        self.type = type
+
+        match self.type:
+            case "Small Freighter":
+                self.hp = 2
+                self.damage = 0
+                self.sunk = False
+            case "Large Freighter":
+
+
+
 def d6Roll():
-    roll = random.randint(0, 5) + 1
+    roll = random.randint(1, 6)
     return roll
 def d6Rollx2():
     roll = d6Roll() + d6Roll()
     return roll
-
-def advanceTime():
-    """Moves time forward one month and checks for end of game if beyond June 1943"""
-    Game.date_month += 1
-    if Game.date_month == 12:
-        Game.date_month = 0
-        Game.date_year += 1
-    if Game.date_month >= 6 & Game.date_year > 43:
-        gameover()
-
-def getTime():
-    month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
-    year = str(Game.date_year)
-    toReturn = Game.month[Game.date_month] + " / " + year
-    return toReturn
 
 class Game():
 
@@ -202,6 +210,9 @@ class Game():
         self.date_year = 1939
         print("Welcome to The Hunters: German U-Boats at War, 1939-43")
         print("First choose a Submarine:")
+        self.permMedPost = False
+        self.permArcPost = False
+        self.francePost = False
         self.sub = Submarine(self.chooseSub())
         self.kmdt = input("Enter Kommandant name: ")
         self.id = input("Enter U-Boat #: ")
@@ -220,6 +231,7 @@ class Game():
         self.randomEvent = False
         self.currentLocationStep = 0
         self.onStationSteps = self.sub.patrol_length
+        self.patrolLength = 0
         self.gameloop()
 
     def getMonth(self):
@@ -229,6 +241,24 @@ class Game():
     def getFullDate(self):
         toReturn = self.month[self.date_month] + " - " + str(self.date_year)
         return toReturn
+
+    def advanceTime(self):
+        """Moves time forward one month and checks for end of game if beyond June 1943"""
+        self.date_month += 1
+        if self.date_month == 12:
+            self.date_month = 0
+            self.date_year += 1
+        if self.date_month >= 6 & self.date_year > 43:
+            gameover()
+        if (self.month[self.date_month] == "July") and self.date_year == 1940:
+            self.francePost = True
+
+    def getTime(self):
+        month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+        year = str(Game.date_year)
+        toReturn = Game.month[Game.date_month] + " / " + year
+        return toReturn
+
     def establishFirstRank(self):
         if self.sub.getType() == "IXA" or self.sub.getType() == "IXB":
             self.rankMod = 1
@@ -268,14 +298,17 @@ class Game():
             case "5" | "VIIC":
                 self.date_month = 9
                 self.date_year = 1940
+                self.francePost = True
                 return "VIIC"
             case "6" | "VIID":
                 self.date_month = 0
                 self.date_year = 1942
+                self.francePost = True
                 return "VIID"
             case "7" | "VIIC Flak":
                 self.date_month = 4
                 self.date_year = 1943
+                self.francePost = True
                 return "VIIC Flak"
 
     def startPatrol(self):
@@ -288,307 +321,522 @@ class Game():
                     print("Die roll:", roll)
                     if roll <= self.rankMod:
                         print("You may select your patrol.")
-                        #TODO SELECT PATROL
+                        self.getPatrol(self.date_month, self.date_year, d6Roll(), self.sub.getType(), True)
                     else:
-                        self.getPatrol(self.date_month, self.date_year, d6Roll(), self.sub.getType())
+                        self.getPatrol(self.date_month, self.date_year, d6Roll(), self.sub.getType(), False)
         else:
-            self.getPatrol(self.date_month,self.date_year,d6Roll(),self.sub.getType())
+            self.getPatrol(self.date_month,self.date_year,d6Roll(),self.sub.getType(), False)
         print("Patrol Assignment:", self.currentOrders)
         depart = "U-" + str(self.id) + " departs port early before dawn for " + self.rank[
             self.rankMod] + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
         print(depart)
         self.currentLocationStep = 1
+        self.patrolLength = self.getPatrolLength(self.currentOrders)
 
     def getPatrolLength(self, patrol):
         match patrol:
-            case "North America":
+            case "North America" | "Caribbean":
                 return self.sub.patrol_length + 8 #NA patrol has normal 2 BoB + 2 transits + extra 4 transits
             case _:
                 return self.sub.patrol_length + 4
 
-    def getPatrol(self,month,year,roll,subClass):
+    def pickPatrol(self):
+        #TODO open correct patrol chart and prompt response from user of those choices MAYBE NOT NEEDED
+        print("TODO")
+
+    def getPatrol(self, month, year, roll, subClass, pickingPatrol):
         if year == 1939 or (month <= 2 and year == 1940):           #1939 - Mar 1940
             with open("PatrolChart1.txt", "r") as fp:
                 lines = fp.readlines()
-                orders = lines [roll-2]
+                if pickingPatrol:
+                    print(lines)
+                    input = ("Pick your orders (Case-sensitive): ")
+                    orders = input
+                else:
+                    orders = lines [roll-2]
         elif month > 2 and month <= 5 and year == 1940:             #1940 - Apr - Jun
             with open("PatrolChart2.txt", "r") as fp:
                 lines = fp.readlines()
-                orders = lines[roll - 2]
+                if pickingPatrol:
+                    print(lines)
+                    input = ("Pick your orders (Case-sensitive): ")
+                    orders = input
+                else:
+                    orders = lines[roll - 2]
         elif month > 5 and month <= 11 and year == 1940:            #1940 - Jul - Dec
             with open("PatrolChart3.txt", "r") as fp:
                 lines = fp.readlines()
-                orders = lines[roll - 2]
+                if pickingPatrol:
+                    print(lines)
+                    input = ("Pick your orders (Case-sensitive): ")
+                    orders = input
+                else:
+                    orders = lines[roll - 2]
+        ##TODO add other date patrol charts and txt files
 
-        #deal with changes in orders based on uboat type
-        if orders == "Mediterranean" or orders == "Artic" and (subClass == "IXA" or subClass == "IXB"):
-            orders = "West African Coast"
-        if orders == "West African Coast" or orders == "Caribbean" and (
-                subClass == "VIIA" or subClass == "VIIB" or subClass == "VIIC"):  # VII Cannot patrol west africa
-            orders = "Atlantic"
-        if orders == "British Isles" and subClass == "VIID":
-            orders = "British Isles (Minelaying)"
-        ##TODO: deal with VIID and VIIC Flak boats not being allowed in med
-        self.currentOrders = orders
+        orders = self.validatePatrol(orders)
 
         #change time on station (onStationSteps) by one less if North American Orders
         if orders == "North America" or orders == "Caribbean":
             self.onStationSteps = self.sub.patrol_length - 1
+        elif "Minelaying" in orders or "Abwehr" in orders:
+            self.onStationSteps = self.sub.patrol_length - 1
         else:
             self.onStationSteps = self.sub.patrol_length
+
+        #strip any stray returns that may have gotten into the orders string
+        orders = orders.strip('\n')
+
+        self.currentOrders = orders
+
+    def validatePatrol(self, orders):
+        """Deal with changes in orders based on U-Boat type"""
+        if orders == "Mediterranean" or orders == "Artic" and (self.subClass == "IXA" or self.subClass == "IXB"):
+            orders = "West African Coast"
+        if orders == "West African Coast" or orders == "Caribbean" and (
+                self.subClass == "VIIA" or self.subClass == "VIIB" or self.subClass == "VIIC"):  # VII Cannot patrol west africa
+            orders = "Atlantic"
+        if orders == "British Isles" and self.subClass == "VIID":
+            orders = "British Isles (Minelaying)"
+
+        #deal with permanent stations
+        if self.permMedPost:
+            orders == "Mediterranean"
+        if self.permArcPost:
+            orders == "Arctic"
+
+        return orders
+        ##TODO: deal with VIID and VIIC Flak boats not being allowed in med (reroll req)
 
     def gameloop(self):
         self.startPatrol()
         self.patrol()
+        self.portReturn()
 
     def patrol(self):
-        #TODO: CHECK if med patrols require BoB roll?
+        """Full patrol loop accounting for leaving porn, transiting, patrolling and returning"""
+
+        if self.currentOrders == "Arctic":   #if Artic patrol, roll to see if permanently assigned to Arctic
+            if d6Roll() <= 3:
+                print("You've been assigned permanently to the Arctic.")
+                self.permArcPost = True
 
         while self.currentLocationStep <= self.getPatrolLength(self.currentOrders):
 
-            #if first leg of patrol
-            if self.currentLocationStep == 1 and (self.currentOrders == "Arctic" or self.currentOrders == "Norway"):
-                print("Your U-Boat sails North.")
-                print(getEncounter(getLocation(self.currentOrders, self.currentLocationStep, self.onStationSteps),
-                                   self.randomEvent))
-            elif self.currentLocationStep == 1:
-                print("Your U-Boat transits across the perilous Bay of Biscay.")
-                encounter = getEncounter(getLocation(self.currentOrders, self.currentLocationStep, self.onStationSteps), self.date_year,
-                                   self.randomEvent)
-                match encounter:
-                    case "-":
-                        print("Uneventful Passage.")
-                    case _:
-                        encounterAircraft(self.sub, self.date_year, self.currentOrders)
+            currentBox = self.getLocation(self.currentOrders, self.currentLocationStep)
+            #if sub is patrolling area (not in transit)
+            if currentBox == self.currentOrders:
+                self.onStationSteps -= 1
+            self.getEncounter(currentBox, self.date_year, self.randomEvent)
 
-            #if on second leg...
-            elif self.currentLocationStep == 2:
-                if "Abwehr" in self.currentOrders or "Minelaying" in self.currentOrders:
-                    print("Your U-Boat continues on to approach the mission area.")
-                else:
-                    print("Your U-boat continues on to approach the designated patrol area.")
-                encounterAircraft(self.sub, self.date_year, self.currentOrders)
-
-            #advance patrol to next leg
+            #end of loop - go to next box of patrol
             self.currentLocationStep += 1
+
+        if self.currentOrders == "Mediterranean":   #if it was a Med patrol, set U boat permanently to Med
+            self.permMedPost = True
+
+    def portReturn(self):
+        print("You've made it home!")
+
+
+    def getLocation(self, patrol, step):
+        """Gets current location box to determine encounter (transit, Atlantic, etc)"""
+        # TODO wolfpacks?
+        match step:
+            case 1:
+                if patrol == "Norway" or patrol == "Arctic":
+                    return "Transit"
+                elif self.francePost and self.permMedPost == False:
+                    return "Bay of Biscay"
+                else:
+                    return "Transit"
+            case 2:
+                if patrol == "Mediterranean" and self.permMedPost == False:
+                    return "Gibraltar Passage"
+                else:
+                    return "Transit"
+            case 3:
+                if patrol == "North America" or patrol == "Caribbean":
+                    return "Transit"
+                else:
+                    return patrol
+            case 4:
+                if patrol == "North America" or patrol == "Caribbean":
+                    return "Transit"
+                else:
+                    return patrol
+            case 5:
+                return patrol
+            case 6:
+                if self.onStationSteps == 0:
+                    if self.currentLocationStep == self.patrolLength - 1:
+                        return "Transit"
+                    elif self.currentLocationStep == self.patrolLength:
+                        if self.permArcPost or self.francePost:
+                            return "Bay of Biscay"
+                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                        return "Transit"
+                    else:
+                        print("ERROR getting loc")
+                else:
+                    return patrol
+            case 7:
+                if self.onStationSteps == 0:
+                    if self.currentLocationStep == self.patrolLength - 1:
+                        return "Transit"
+                    elif self.currentLocationStep == self.patrolLength:
+                        if self.permArcPost or self.francePost:
+                            return "Bay of Biscay"
+                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                        return "Transit"
+                    else:
+                        print("ERROR getting loc")
+                else:
+                    return patrol
+            case 8:
+                if self.onStationSteps == 0:
+                    if self.currentLocationStep == self.patrolLength - 1:
+                        return "Transit"
+                    elif self.currentLocationStep == self.patrolLength:
+                        if self.permArcPost or self.francePost:
+                            return "Bay of Biscay"
+                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                        return "Transit"
+                    else:
+                        print("ERROR getting loc")
+                else:
+                    return patrol
+
+
+    def getEncounter(self, loc, year, randomEvent):
+        """Determines which location encounter chart to use, then rolls against and returns the string encounter name"""
+        roll = d6Rollx2()
+        print("Roll for location:", loc, "-", roll)
+        if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":  # First check if random event (natural 12)
+            return "Random Event"
+
+        #determine if this is a mission box to roll against mission
+        if (loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+            loc = "Mission"
+        if loc == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
+            loc = "Mission"
+
+
+        match loc:
+            case "Transit":  # Transit encounter chart
+                match roll:
+                    case 2 | 3:
+                        #aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 12:
+                        #ship
+                        print("Ship")
+                        self.encounterAttack()
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Arctic":  # Artic encounter chart
+                match roll:
+                    case 2:
+                        print("Capital Ship")
+                    case 3:
+                        print("Ship")
+                    case 6 | 7 | 8:
+                        print("Convoy")
+                    case 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Atlantic":  # Atlantic encounter chart
+                match roll:
+                    case 2:
+                        print("Capital Ship")
+                    case 3:
+                        print("Ship")
+                    case 6 | 7 | 9 | 12:
+                        print("Convoy")
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "British Isles":  # British Isles encounter chart
+                match roll:
+                    case 2:
+                        print("Capital Ship")
+                    case 5 | 8:
+                        print("Ship")
+                    case 6:
+                        print("Ship + Escort")
+                    case 10:
+                        print("Convoy")
+                    case 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Caribbean":  # Carribean encounter chart
+                match roll:
+                    case 2 | 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 4 | 8:
+                        print("Ship")
+                    case 6:
+                        print("Two Ships + Escort")
+                    case 9 | 10:
+                        return "Tanker"
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Mediterranean":  # Mediterranean encounter chart
+                match roll:
+                    case 2 | 3 | 11 | 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 4:
+                        print("Capital Ship")
+                    case 7:
+                        print("Ship")
+                    case 8:
+                        print("Convoy")
+                    case 10:
+                        print("Two Ships + Escort")
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "North America":  # North American encounter chart
+                match roll:
+                    case 2:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 4 | 6:
+                        print("Ship")
+                    case 5:
+                        print("Two Ships + Escort")
+                    case 8:
+                        print("Two Ships")
+                    case 9 | 12:
+                        print("Tanker")
+                    case 11:
+                        print("Convoy")
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Norway":  # Norway encounter chart
+                match roll:
+                    case 2 | 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 3 | 11:
+                        print("Capital Ship")
+                    case 4 | 9 | 10:
+                        print("Ship + Escort")
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Spanish Coast":  # Spanish Coast encounter chart
+                match roll:
+                    case 2 | 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case 5:
+                        print("Ship + Escort")
+                    case 6 | 7:
+                        print("Ship")
+                    case 10 | 11:
+                        print("Convoy")
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "West African Coast":  # West African Coast encounter chart
+                match roll:
+                    case 2:
+                        print("Capital Ship")
+                    case 3 | 7:
+                        print("Ship")
+                    case 6 | 10:
+                        print("Convoy")
+                    case 9:
+                        print("Ship + Escort")
+                    case 12:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Additional Round of Combat" | "Gibraltar Passage":
+                if year == 1942:
+                    roll = roll - 1
+                    print("-1 for 1942")
+                elif year == 1943:
+                    roll = roll - 2
+                    print("-2 for 1943")
+                if loc == "Gibraltar Passage":
+                    roll = roll - 2
+                    print("-2 for Gibraltar")
+                match roll:
+                    case -2, -1, 0, 1, 2, 3:
+                        return "Escort"
+                    case 4 | 5:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+            case "Bay of Biscay" | "Mission":
+                if year == 1942 and loc == "Bay of Biscay":
+                    roll = roll - 1
+                    print("-1 for 1942")
+                elif year == 1943 and loc == "Bay of Biscay":
+                    roll = roll - 2
+                    print("-2 for 1943")
+                match roll:
+                    case 0 | 1 | 2 | 3 | 4:
+                        # aircraft
+                        self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
+                    case _:
+                        #no encounter
+                        self.encounterNone(loc)
+
+    ##----------------------------------------------- PATROL BOXES (TO DETERMINE WHICH ENCOUNTER TO ROLL)
+
+    def patrolBoxTransit(self):
+        if self.currentLocationStep == 1 and (self.currentOrders == "Artic" or self.currentOrders == "Norway"):
+            print("Your U-Boat sails North towards its patrol area.")
+        elif self.onStationSteps > 0:
+            print("Your U-Boat sails on towards its assigned patrol area.")
+        else:
+            print("Your U-Boat turns around and heads for home.")
+        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year, self.randomEvent)
+
+    def patrolBoxBayOfBiscay(self):
+        print("Your U-Boat transits across the perilous Bay of Biscay.")
+        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year, self.randomEvent)
+
+
+    ##----------------------------------------------- ENCOUNTERS
+
+    def encounterNone(self, loc):
+        randResult = random.randint(0, 2)
+        match loc:
+            case "Transit":
+                print("You have an uneventful transit.")
+            case "Bay of Biscay":
+                print("You cross the Bay of Biscay without issues.")
+            case "Mission":
+                #TODO ?
+                print("Mission")
+            case "Arctic" | "Norway":
+                match randResult:
+                    case 0:
+                        print("You spot nothing in this section of your frigid patrol.")
+                    case 1:
+                        print("Inclement weather ensures you find nothing on this part of your patrol.")
+                    case 2:
+                        print("This part of your Northern patrol is uneventful.")
+            case "Atlantic":
+                match randResult:
+                    case 0:
+                        print("You spot nothing in this part of the Atlantic.")
+                    case 1:
+                        print("Your patrol area in this part of the Atlantic seems to be empty.")
+                    case 2:
+                        print("Foul weather ensures you find nothing on this part of your patrol in the Atlantic.")
+            case "British Isles":
+                match randResult:
+                    case 0:
+                        print("No contacts in the vicinity of your ship off the British Isles.")
+                    case 1:
+                        print("Your patrol area near the shores of the British Isles is deserted.")
+                    case 2:
+                        print("Foul weather ensures you find nothing on this part of your patrol of the British Isles.")
+            case "Caribbean" | "North America":
+                match randResult:
+                    case 0:
+                        print("A long way from home and you find nothing on this part of the patrol.")
+                    case 1:
+                        print("This area of the Western waters appear to be empty.")
+                    case 2:
+                        print("Nasty storms reduce visibility to nothing - ensuring you find nothing on this part of your patrol.")
+            case "Mediterranean" | "Spanish Coast" | "West African Coast":
+                match randResult:
+                    case 0 | 1:
+                        print("This part of your patrol was uneventful.")
+                    case 2:
+                        print("Storms disrupt your ability to search for targets and you find nothing this time.")
+            case "Gibraltar":
+                match randResult:
+                    case 0:
+                        print("In the cover of night you were able to slip through the Gibraltar patrols.")
+                    case 1:
+                        print("A foggy morning and some luck allow you to pass unnoticed through Gibraltar.")
+                    case 2:
+                        print("A timely storm pushes several patrolling ships off station, allowing you to run straight through Gibraltar.")
+            case "Additional Round of Combat":
+                #TODO
+                print("TODO")
+        time.sleep(2)
+
+
+    def encounterAircraft(self, sub, year, patrolType):
+        print("ALARM! Aircraft in sight! Rolling to crash dive!")
+        roll = d6Rollx2()
+        drm = 0
+
+        if sub.crew_level == 0:
+            drm -= 1
+        elif sub.crew_level == 3:
+            drm += 1
+        if sub.crewKnockedOut():
+            drm -= 1
+        if sub.dive_planes > 0:
+            drm -= 1
+        if sub.subClass == "VIID" or sub.subClass == "IXA" or sub.subClass == "IXB":
+            drm -= 1
+        match year:
+            case 1939:
+                drm += 1
+            case 1942:
+                drm -= 1
+            case 1943:
+                drm -= 2
+        if (patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+            drm -= 1
+        if patrolType == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
+            drm -= 1
+
+        total = roll + drm
+        print("Roll:", roll, "• Modifiers:", drm, "| MODIFIED ROLL:", total)
+
+        if total <= 1:
+            print("TWO ATTACKS!")
+        elif total <= 5:
+            print("One attack!")
+        else:
+            print("Successful crash dive!")
+
+        time.sleep(2)
+
+    def encounterAttack(self, enc):
+        tgt = []
+        if enc == "Ship":
+            tgt[1] = getShip()
+
+    def getShip():
+        shipType = d6Roll()
+
+        if
+
 
 def gameover():
     print("GAMEOVER!")
 
-def getEncounter(loc,year,randomEvent):
-    roll = d6Rollx2()
-    print("Roll for location", loc, "-", roll)
-    if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":  #First check if random event (natural 12)
-        return "Random Event"
-    match loc:
-        case "Transit":                                     #Transit encounter chart
-            match roll:
-                case 2 | 3:
-                    return "Aircraft"
-                case 12:
-                    return "Ship"
-                case _:
-                    return "-"
-        case "Arctic":                                      #Artic encounter chart
-            match roll:
-                case 2:
-                    return "Capital Ship"
-                case 3:
-                    return "Ship"
-                case 6 | 7 | 8:
-                    return "Convoy"
-                case 12:
-                    return "Aircraft"
-                case _:
-                    return "-"
-        case "Atlantic":                                    #Atlantic encounter chart
-            match roll:
-                case 2:
-                    return "Capital Ship"
-                case 3:
-                    return "Ship"
-                case 6 | 7 | 9 | 12:
-                    return "Convoy"
-                case _:
-                    return "-"
-        case "British Isles":                               #British Isles encounter chart
-            match roll:
-                case 2:
-                    return "Capital Ship"
-                case 5 | 8:
-                    return "Ship"
-                case 6:
-                    return "Ship + Escort"
-                case 10:
-                    return "Convoy"
-                case 12:
-                    return "Aircraft"
-                case _:
-                    return "-"
-        case "Caribbean":                                    # Carribean encounter chart
-            match roll:
-                case 2 | 12:
-                    return "Aircraft"
-                case 4 | 8:
-                    return "Ship"
-                case 6:
-                    return "Two Ships + Escort"
-                case 9 | 10:
-                    return Tanker
-                case _:
-                    return "-"
-        case "Mediterranean":                                # Mediterranean encounter chart
-            match roll:
-                case 2 | 3 | 11 | 12:
-                    return "Aircraft"
-                case 4:
-                    return "Capital Ship"
-                case 7:
-                    return "Ship"
-                case 8:
-                    return "Convoy"
-                case 10:
-                    return "Two Ships + Escort"
-                case _:
-                    return "-"
-        case "North America":                                # North American encounter chart
-            match roll:
-                case 2:
-                    return "Aircraft"
-                case 4 | 6:
-                    return "Ship"
-                case 5:
-                    return "Two Ships + Escort"
-                case 8:
-                    return "Two Ships"
-                case 9 | 12:
-                    return "Tanker"
-                case 11:
-                    return "Convoy"
-                case _:
-                    return "-"
-        case "Norway":                                      # Norway encounter chart
-            match roll:
-                case 2 | 12:
-                    return "Aircraft"
-                case 3 | 11:
-                    return "Capital Ship"
-                case 4 | 9 | 10:
-                    return "Ship + Escort"
-                case _:
-                    return "-"
-        case "Spanish Coast":                               # Spanish Coast encounter chart
-            match roll:
-                case 2 | 12:
-                    return "Aircraft"
-                case 5:
-                    return "Ship + Escort"
-                case 6 | 7:
-                    return "Ship"
-                case 10 | 11:
-                    return "Convoy"
-                case _:
-                    return "-"
-        case "West African Coast":                           # West African Coast encounter chart
-            match roll:
-                case 2:
-                    return "Capital Ship"
-                case 3 | 7:
-                    return "Ship"
-                case 6 | 10:
-                    return "Convoy"
-                case 9:
-                    return "Ship + Escort"
-                case 12:
-                    return "Aircraft"
-                case _:
-                    return "-"
-        case "Additional Round of Combat" | "Gibraltar Passage":
-            if year == 1942:
-                roll = roll - 1
-                print("-1 for 1942")
-            elif year == 1943:
-                roll = roll - 2
-                print("-2 for 1943")
-            if loc == "Gibraltar Passage":
-                roll = roll - 2
-                print("-2 for Gibraltar")
-            match roll:
-                case -2, -1, 0, 1, 2, 3:
-                    return "Escort"
-                case 4 | 5:
-                    return "Aircraft"
-                case _:
-                    return "-"
-        case "Bay of Biscay" | "Mission":
-            if year == 1942 and loc == "Bay of Biscay":
-                roll = roll - 1
-                print ("-1 for 1942")
-            elif year == 1943 and loc == "Bay of Biscay":
-                roll = roll - 2
-                print ("-2 for 1943")
-            match roll:
-                case 0 | 1 | 2 | 3 | 4:
-                    return "Aircraft"
-                case _:
-                    return "-"
 
-def getLocation(patrol,step,onStationLeft):
-    """Gets current location box to determine encounter (transit, Atlantic, etc)"""
-    #TODO wolfpacks?
 
-    if step == 1 and (patrol == "Norway" or patrol == "Artic"):
-        return "Transit"
-    elif step == 1:
-        return "Bay of Biscay"
 
-    if step == 2 and patrol == "Mediterranean":
-        return "Gibraltar Passage"
-    elif step == 2:
-        return "Transit"
 
-    if step == 3 and (patrol == "North America" or patrol == "Caribbean"):
-        return "Transit"
-    elif step == 3 and ("Minelaying" in patrol or "Abwehr" in patrol):
-        return "Mission"
-    elif step == 3:
-        return patrol
-
-##----------------------------------------------- ENCOUNTERS
-def encounterAircraft(sub,year,patrolType):
-    print("ALARM! Aircraft in sight! Rolling to crash dive!")
-    roll = d6Rollx2()
-    drm = 0
-
-    if sub.crew_level == 0:
-        drm -= 1
-    elif sub.crew_level == 3:
-        drm += 1
-    if sub.crewKnockedOut():
-        drm -= 1
-    if sub.dive_planes > 0:
-        drm -= 1
-    if sub.subClass == "VIID" or sub.subClass == "IXA" or sub.subClass == "IXB":
-        drm -= 1
-    match year:
-        case 1939:
-            drm += 1
-        case 1942:
-            drm -= 1
-        case 1943:
-            drm -= 2
-    if "Abwehr" in patrolType or "Minelaying" in patrolType:
-        drm -= 1
-
-    total = roll + drm
-    print("Roll:", roll, "• Modifiers:", drm, "| MODIFIED ROLL:", total)
-
-    if total <= 1:
-        print("TWO ATTACKS!")
-    elif total <= 5:
-        print("One attack!")
-    else:
-        print("Successful crash dive!")
 
 
 
