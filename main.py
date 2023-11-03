@@ -181,19 +181,70 @@ class Ship():
     damage = 0
     name = ""
     GRT = 0
+    clss = ""
     sunk = False
 
-    def __init__(self, type):
+    def __init__(self, type, loc = ""):
         self.type = type
 
         match self.type:
             case "Small Freighter":
+                self.damage = 0
                 self.hp = 2
+                self.sunk = False
+                self.clss = type
+                with open("Small Freighter.txt", "r") as fp:
+                    lines = fp.readlines()
+                    if loc == "North America":
+                        print("Get NA small freighter from end of list")
+                        #TODO add NA freighters AFTER regular freighters
+                        #TODO get lines[randomint] of 101-120 or whatever
+                    else:
+                        entry = lines[random.randint(1,25)]   #TODO finish small freighter .txt and increase to 100
+                    entry = entry.split("-")
+                    self.name = entry[0]
+                    self.GRT = int(entry[1])
+
+            case "Large Freighter" | "Tanker":
+                with open(f"{type}.txt", "r") as fp:
+                    lines = fp.readlines()
+                    if loc == "North America":
+                        print("Get NA ship from end of list")
+                        #TODO add NA freighters AFTER regular freighters
+                        #TODO get lines[randomint] of 101-120 or whatever
+                    else:
+                        entry = lines[random.randint(1, 3)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
+                    entry = entry.split("-")
+                    self.name = entry[0]
+                    self.GRT = int(entry[1])
+                if self.GRT >= 10000:
+                    self.hp = 4
+                else:
+                    self.hp = 3
+                self.clss = type
                 self.damage = 0
                 self.sunk = False
-            case "Large Freighter":
 
+            case "Escort":
+                #TODO
+                with open("Escort.txt", "r") as fp:
+                    lines = fp.readlines()
+                    entry = lines[random.randint(1,669)]
+                    entry = entry.split("#")
+                    self.name = entry[0]
+                    self.clss = entry[1]
+                    self.GRT = int(entry[2])
+                    self.hp = 4 #TODO doublecheck HP on escorts
+                    self.damage = 0
+                    self.sunk = False
 
+            case "Capital Ship":
+                #TODO - add capital ship.txt etc
+                print("TODO")
+
+    def __str__(self):
+        s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"
+        return s
 
 def d6Roll():
     roll = random.randint(1, 6)
@@ -232,6 +283,7 @@ class Game():
         self.currentLocationStep = 0
         self.onStationSteps = self.sub.patrol_length
         self.patrolLength = 0
+        self.shipsSunk = []
         self.gameloop()
 
     def getMonth(self):
@@ -529,20 +581,17 @@ class Game():
                         #aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 12:
-                        #ship
-                        print("Ship")
-                        self.encounterAttack()
+                        self.encounterAttack("Ship")
                     case _:
-                        #no encounter
                         self.encounterNone(loc)
             case "Arctic":  # Artic encounter chart
                 match roll:
                     case 2:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 3:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 6 | 7 | 8:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case 12:
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
@@ -552,24 +601,24 @@ class Game():
             case "Atlantic":  # Atlantic encounter chart
                 match roll:
                     case 2:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 3:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 6 | 7 | 9 | 12:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case _:
                         #no encounter
                         self.encounterNone(loc)
             case "British Isles":  # British Isles encounter chart
                 match roll:
                     case 2:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 5 | 8:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 6:
-                        print("Ship + Escort")
+                        self.encounterAttack("Ship + Escort")
                     case 10:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case 12:
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
@@ -582,9 +631,9 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 4 | 8:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 6:
-                        print("Two Ships + Escort")
+                        self.encounterAttack("Two Ships + Escort")
                     case 9 | 10:
                         return "Tanker"
                     case _:
@@ -596,13 +645,13 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 4:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 7:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 8:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case 10:
-                        print("Two Ships + Escort")
+                        self.encounterAttack("Two Ships + Escort")
                     case _:
                         #no encounter
                         self.encounterNone(loc)
@@ -612,15 +661,15 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 4 | 6:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 5:
-                        print("Two Ships + Escort")
+                        self.encounterAttack("Two Ships + Escort")
                     case 8:
-                        print("Two Ships")
+                        self.encounterAttack("Two Ships")
                     case 9 | 12:
-                        print("Tanker")
+                        self.encounterAttack("Tanker")
                     case 11:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case _:
                         #no encounter
                         self.encounterNone(loc)
@@ -630,9 +679,9 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 3 | 11:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 4 | 9 | 10:
-                        print("Ship + Escort")
+                        self.encounterAttack("Ship + Escort")
                     case _:
                         #no encounter
                         self.encounterNone(loc)
@@ -642,24 +691,24 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 5:
-                        print("Ship + Escort")
+                        self.encounterAttack("Ship + Escort")
                     case 6 | 7:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 10 | 11:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case _:
                         #no encounter
                         self.encounterNone(loc)
             case "West African Coast":  # West African Coast encounter chart
                 match roll:
                     case 2:
-                        print("Capital Ship")
+                        self.encounterAttack("Capital Ship")
                     case 3 | 7:
-                        print("Ship")
+                        self.encounterAttack("Ship")
                     case 6 | 10:
-                        print("Convoy")
+                        self.encounterAttack("Convoy")
                     case 9:
-                        print("Ship + Escort")
+                        self.encounterAttack("Ship + Escort")
                     case 12:
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
@@ -722,7 +771,13 @@ class Game():
         randResult = random.randint(0, 2)
         match loc:
             case "Transit":
-                print("You have an uneventful transit.")
+                match randResult:
+                    case 0:
+                        print("You have an uneventful transit.")
+                    case 1:
+                        print("Your cruise onwards is uneventful.")
+                    case 2:
+                        print("You continue to sail towards your destination, finding nothing along the way.")
             case "Bay of Biscay":
                 print("You cross the Bay of Biscay without issues.")
             case "Mission":
@@ -820,15 +875,64 @@ class Game():
         time.sleep(2)
 
     def encounterAttack(self, enc):
+        ship = self.getShips(enc)
+
+        timeRoll = d6Roll()
+        if timeRoll <= 3:
+            timeOfDay = "Day"
+        else:
+            timeOfDay = "Night"
+        #TODO deal with arctic times
+
+        bearing = random.randint(0, 359)
+        course1 = random.randint(1, 16)
+        course = ["N", "NNW", "NW", "WNW", "W", "WSW", "SW", "SSW", "S", "SSE", "SE", "ESE", "E", "ENE", "NE", "NNE"]
+        if enc == "Tanker" or enc == "Ship":
+            toPrint = "Ship Spotted! Bearing " + str(bearing) + " course " + course[course1]
+            print(toPrint)
+        else:
+            toPrint = "Ships Spotted! Bearing " + str(bearing) + " course " + course[course1]
+            print(toPrint)
+
+        for x in range (len(ship)):
+            print(ship[x], end="")
+            if x != (len(ship)):
+                print(", ", end="")
+            if x == (len(ship)):
+                print("")
+
+        time.sleep(5)
+        #if ship[0] is None:
+
+
+    def getShips(self, enc):
         tgt = []
-        if enc == "Ship":
-            tgt[1] = getShip()
+        if enc == "Convoy" or enc == "Capital Ship" or "Escort" in enc:
+            tgt.append(Ship("Escort"))
 
-    def getShip():
-        shipType = d6Roll()
+        if enc == "Tanker":
+            tgt.append(Ship("Tanker"))
 
-        if
+        if enc == "Ship" or enc == "Two Ships" or enc == "Convoy" or enc == "Ship + Escort" or enc == "Two Ships + Escort":
+            tgt.append(Ship(self.getTargetShipType()))
 
+        if "Two Ships" in enc or enc == "Convoy":
+            tgt.append(Ship(self.getTargetShipType()))
+
+        if enc == "Convoy":
+            tgt.append(Ship(self.getTargetShipType()))
+            tgt.append(Ship(self.getTargetShipType()))
+
+        return tgt
+
+    def getTargetShipType(self):
+        shipRoll = d6Roll()
+        if shipRoll <= 3:
+            return "Small Freighter"
+        elif shipRoll <= 5:
+            return "Large Freighter"
+        else:
+            return "Tanker"
 
 def gameover():
     print("GAMEOVER!")
