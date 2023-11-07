@@ -264,11 +264,20 @@ class Ship():
             return True
         else:
             return False
+
     def resetG7a(self):
         self.G7aINCOMING = 0
+
     def resetG7e(self):
         self.G7eINCOMING = 0
-
+    def removeG7a(self):
+        self.G7aINCOMING = self.G7aINCOMING - 1
+    def removeG7e(self):
+        self.G7eINCOMING = self.G7eINCOMING - 1
+    def takeDamage(self, dam):
+        self.damage = self.damage - dam
+        if self.damage >= self.hp:
+            self.sunk = True
 def d6Roll():
     roll = random.randint(1, 6)
     return roll
@@ -425,8 +434,8 @@ class Game():
                 lines = fp.readlines()
                 if pickingPatrol:
                     print(lines)
-                    input = ("Pick your orders (Case-sensitive): ")
-                    orders = input
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
                 else:
                     orders = lines [roll-2]
         elif month > 2 and month <= 5 and year == 1940:             #1940 - Apr - Jun
@@ -434,8 +443,8 @@ class Game():
                 lines = fp.readlines()
                 if pickingPatrol:
                     print(lines)
-                    input = ("Pick your orders (Case-sensitive): ")
-                    orders = input
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
                 else:
                     orders = lines[roll - 2]
         elif month > 5 and month <= 11 and year == 1940:            #1940 - Jul - Dec
@@ -443,8 +452,8 @@ class Game():
                 lines = fp.readlines()
                 if pickingPatrol:
                     print(lines)
-                    input = ("Pick your orders (Case-sensitive): ")
-                    orders = input
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
                 else:
                     orders = lines[roll - 2]
         ##TODO add other date patrol charts and txt files
@@ -588,6 +597,7 @@ class Game():
         roll = d6Rollx2()
         print("Roll for location:", loc, "-", roll)
         if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":  # First check if random event (natural 12)
+            print("Random Event! TODO")
             return "Random Event"
 
         #determine if this is a mission box to roll against mission
@@ -919,12 +929,9 @@ class Game():
             print(toPrint)
 
         #Print target ship(s)
-        for x in range (len(ship)):
-            print(ship[x], end="")
-            if x != (len(ship)):
-                print(", ", end="")
-            if x == (len(ship)):
-                print("")
+        for s in range(len(ship)):
+            strng = "• " + str(ship[s])
+            print(strng)
         time.sleep(2)
 
         abort = input("Do you wish to attack? Y/N")
@@ -934,67 +941,78 @@ class Game():
                 return exit
 
         #ask to flip to day or night
-        flip = input("Do you wish to attempt to attempt to follow the target and switch from night")
+        if timeOfDay == "Night":
+            flip = input("Do you wish to attempt to attempt to follow the target and attack during the day?")
+        else:
+            flip = input("Do you wish to attempt to attempt to follow the target and attack during the night?")
         match flip:
             case "yes" | "Yes" | "Y" | "y":
-                if d6Roll() >= 5:
+                fliproll = d6Roll()
+                if fliproll >= 5:
+                    print("We lost them! Roll:", fliproll)
                     return exit
+                else:
+                    print("We successfully followed them.")
 
         #choosing type of attack
         if ship[0].type == "Escort" and timeOfDay == "Day":
+            print("Periscope Depth!")
             depth = "Submerged"
         else:
             typeofAttack = input ("Do you wish to attack submerged or surfaced?")
             match typeofAttack:
                 case "Submerged" | "submerged" | "sub":
+                    print("Periscope Depth!")
                     depth = "Submerged"
                 case "Surface" | "surface" | "Surfaced" | "surfaced":
+                    print("Manning the UZO for surface attack!")
                     depth = "Surfaced"
 
         #determine range
         if ship[0].type == "Escort":
             #print("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
-            r = input("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
+            r = input("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3) Long Range")
         else:
-            r = input("Choose Range:\n1) Close\n2) Medium Range\n3)Long Range")
+            r = input("Choose Range:\n1) Close\n2) Medium Range\n3) Long Range")
         match r:
             case "1" | "Close":
                 if ship[0].type == "Escort":
                     self.escortDetection()
-                r = 1
+                r = 8   #must hit on 8 or less
             case "2" | "Medium":
-                r = 2
+                r = 7   #hit on 7 or less
             case "3" | "Long":
-                r = 3
+                r = 6   #hit on 6 or less
 
         #show and assign weps
         self.sub.subSupplyPrintout()
         if depth == "Surfaced" and ship[0].type != "Escort" and timeOfDay == "Night":
-            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
+            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
         elif depth == "Surfaced" and ship[0].type != "Escort":
-            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
+            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
         else:
-            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
+            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
         #TODO Need to validate engagement type (include in while loop?)
         notValid = True
         while notValid:
             match wep1:
                 case "1" | "Bow":
                     if self.sub.forward_G7a == 0 and self.sub.forward_G7e == 0:
-                        break
+                        continue
                     print("Targets:")
-                    for s in ship:
-                        strng = s+1 + ") " + ship[s]
+                    for s in range (len(ship)):
+                        strng = str(s+1) + ") " + str(ship[s])
+                        print(strng)
 
                     totalToFire = self.sub.forward_G7a + self.sub.forward_G7e
                     totalG7aAvail = self.sub.forward_G7a
-                    totalG7eAvail = self.sub.forward_G7a
+                    totalG7eAvail = self.sub.forward_G7e
                     while totalToFire != 0:
                         target = int(input("Enter ship # from above to target."))
                         target = target - 1
-                        if target < len(ship) or target > len(ship):
-                            break
-                        leftToFire = "G7a: " + totalG7aAvail + " " + "G7e: " + totalG7eAvail
+                        if target < 0 or target > len(ship):
+                            continue
+                        leftToFire = "G7a: " + str(totalG7aAvail) + " " + "G7e: " + str(totalG7eAvail)
                         print(leftToFire)
                         if totalG7aAvail > 0:
                             G7aFire = -1
@@ -1009,11 +1027,9 @@ class Game():
                             ship[target].fireG7e(G7eFire)
                             totalToFire = totalToFire - G7eFire
 
-
-
                 case "2" | "Aft":
                     if self.sub.aft_G7a == 0 and self.sub.aft_G7e == 0:
-                        break
+                        continue
                     self.sub.printAftTubes()
                     if self.sub.aft_G7a > 0 and self.sub.aft_G7e > 0:
                         numG7aToFire = int(input("Enter # of G7a torpedoes to fire:"))
@@ -1025,21 +1041,77 @@ class Game():
                     else:
                         print("Error!")
                     if numG7aToFire > self.sub.aft_G7a or numG7eToFire > self.sub.aft_G7e:
-                        break
+                        continue
+
                 case "3" | "Deck" | "Deck Gun":
                     if self.sub.deck_gun_ammo == 0:
-                        break
+                        continue
                     if self.sub.deck_gun_ammo >= 2:
                         deckGunToFire = 2
                     else:
                         deckGunToFire = 1
             notValid = False
-        #TODO now need to determine which attacks go to which target(s)
 
-        notValid = True
-        while notValid:
-            if wep1 == "1" or wep1 == "2":
+        #resolve each torpedo by rolling and getting roll mods
+        for s in range (len(ship)):
+            while ship[s].hasTorpedoesIncoming:
+                currentship = str(ship[s])
+                torpRoll = d6Rollx2()
+                rollMod = 0
+                if depth == "Surfaced":
+                    rollMod = rollMod -1
+                #TODO add mod for KC+Oakleaves award
+                if self.sub.crew_level == 0:
+                    rollMod += 1
+                if self.sub.crewKnockedOut():
+                    rollMod += 1
+                if self.sub.kmdt > 1:
+                    if self.sub.WO1 > 1:
+                        rollMod += 2
+                    else:
+                        rollMod += 1
+                #todo add mod for second salvo
+                if ship[s].G7aINCOMING > 0:
+                    print("Roll to hit:", torpRoll, "Modifiers:", rollMod)
+                    if torpRoll + rollMod <= r:
+                        print("Hit! ", end="")
+                        #roll for dud
+                        if self.wasDud("G7a"):
+                            print("Torpedo was a dud!")
+                            time.sleep(3)
+                            ship[s].removeG7a()
+                        else:
+                            damRoll = d6Roll()
+                            match damRoll:
+                                case 1:
+                                    print("Massive damage! (4)")
+                                    ship[s].removeG7a()
+                                    ship[s].takeDamage(4)
+                                case 2:
+                                    print("Critical damage! (3)")
+                                    ship[s].removeG7a()
+                                    ship[s].takeDamage(3)
+                                case 3:
+                                    print("Clean hit! (2)")
+                                    ship[s].removeG7a()
+                                    ship[s].takeDamage(2)
+                                case 4 | 5 | 6:
+                                    print("Minor damage! (1)")
+                                    ship[s].removeG7a()
+                                    ship[s].takeDamage(1)
+                            time.sleep(3)
+                    else:
+                        print("Torpedo Missed.")
+                        ship[s].removeG7a()
+                        time.sleep(3)
+                if ship[s].G7eINCOMING > 0:
+                    #TODO deal with electric torps fired
+                    print("Deal with Electric Torps")
 
+            if ship[s].sunk:
+                print("Ship has been sunk!")
+                self.shipsSunk.append(ship[s])
+                time.sleep(3)
 
 
     def getShips(self, enc):
@@ -1077,6 +1149,28 @@ class Game():
     def escortDetection(self):
         #TODO
         print("yes")
+
+    def wasDud(self, torp):
+        #TODO superior torpedoes mod?
+        dudRoll = d6Roll()
+        if self.date_year >= 1941:
+            if dudRoll == 1:
+                return True
+            else:
+                return False
+        elif self.date_year == 1940 and self.date_month >= 6:
+            if dudRoll >= 2:
+                return False
+            else:
+                return True
+        else:
+            if torp == "G7a" and dudRoll >= 2:
+                return False
+            elif torp == "G7e" and dudRoll >= 3:
+                return False
+            else:
+                return True
+
 
 def gameover():
     print("GAMEOVER!")
