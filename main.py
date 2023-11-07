@@ -169,6 +169,15 @@ class Submarine():
               self.reloads_aft_G7e)
         print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
 
+    def printForwardTubes(self):
+        print("Forward Tubes:", self.forward_tubes, "G7a:", self.forward_G7a, "G7e:", self.forward_G7e)
+
+    def printAftTubes(self):
+        print("Aft Tubes:", self.aft_tubes, "G7a:", self.aft_G7a, "G7e:", self.aft_G7e)
+
+    def printDeckGun(self):
+        print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
+
     def crewKnockedOut(self):
         if self.crew1 > 1 and self.crew2 > 1 and self.crew3 > 1 and self.crew4 > 1:
             return True
@@ -186,6 +195,8 @@ class Ship():
 
     def __init__(self, type, loc = ""):
         self.type = type
+        self.G7aINCOMING = 0
+        self.G7eINCOMING = 0
 
         match self.type:
             case "Small Freighter":
@@ -226,7 +237,6 @@ class Ship():
                 self.sunk = False
 
             case "Escort":
-                #TODO
                 with open("Escort.txt", "r") as fp:
                     lines = fp.readlines()
                     entry = lines[random.randint(1,669)]
@@ -245,6 +255,19 @@ class Ship():
     def __str__(self):
         s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"
         return s
+    def fireG7a(self,num):
+        self.G7aINCOMING = self.G7eINCOMING + num
+    def fireG7e(self,num):
+        self.G7eINCOMING = self.G7eINCOMING + num
+    def hasTorpedoesIncoming(self):
+        if self.G7aINCOMING > 0 or self.G7eINCOMING > 0:
+            return True
+        else:
+            return False
+    def resetG7a(self):
+        self.G7aINCOMING = 0
+    def resetG7e(self):
+        self.G7eINCOMING = 0
 
 def d6Roll():
     roll = random.randint(1, 6)
@@ -883,6 +906,7 @@ class Game():
         else:
             timeOfDay = "Night"
         #TODO deal with arctic times
+        print(timeOfDay)
 
         bearing = random.randint(0, 359)
         course1 = random.randint(1, 16)
@@ -894,15 +918,128 @@ class Game():
             toPrint = "Ships Spotted! Bearing " + str(bearing) + " course " + course[course1]
             print(toPrint)
 
+        #Print target ship(s)
         for x in range (len(ship)):
             print(ship[x], end="")
             if x != (len(ship)):
                 print(", ", end="")
             if x == (len(ship)):
                 print("")
+        time.sleep(2)
 
-        time.sleep(5)
-        #if ship[0] is None:
+        abort = input("Do you wish to attack? Y/N")
+        match abort:
+            case "n" | "N" | "no" | "No":
+                #break out of encounter
+                return exit
+
+        #ask to flip to day or night
+        flip = input("Do you wish to attempt to attempt to follow the target and switch from night")
+        match flip:
+            case "yes" | "Yes" | "Y" | "y":
+                if d6Roll() >= 5:
+                    return exit
+
+        #choosing type of attack
+        if ship[0].type == "Escort" and timeOfDay == "Day":
+            depth = "Submerged"
+        else:
+            typeofAttack = input ("Do you wish to attack submerged or surfaced?")
+            match typeofAttack:
+                case "Submerged" | "submerged" | "sub":
+                    depth = "Submerged"
+                case "Surface" | "surface" | "Surfaced" | "surfaced":
+                    depth = "Surfaced"
+
+        #determine range
+        if ship[0].type == "Escort":
+            #print("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
+            r = input("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
+        else:
+            r = input("Choose Range:\n1) Close\n2) Medium Range\n3)Long Range")
+        match r:
+            case "1" | "Close":
+                if ship[0].type == "Escort":
+                    self.escortDetection()
+                r = 1
+            case "2" | "Medium":
+                r = 2
+            case "3" | "Long":
+                r = 3
+
+        #show and assign weps
+        self.sub.subSupplyPrintout()
+        if depth == "Surfaced" and ship[0].type != "Escort" and timeOfDay == "Night":
+            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
+        elif depth == "Surfaced" and ship[0].type != "Escort":
+            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
+        else:
+            wep1 = input ("How should we engage?\n1)Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
+        #TODO Need to validate engagement type (include in while loop?)
+        notValid = True
+        while notValid:
+            match wep1:
+                case "1" | "Bow":
+                    if self.sub.forward_G7a == 0 and self.sub.forward_G7e == 0:
+                        break
+                    print("Targets:")
+                    for s in ship:
+                        strng = s+1 + ") " + ship[s]
+
+                    totalToFire = self.sub.forward_G7a + self.sub.forward_G7e
+                    totalG7aAvail = self.sub.forward_G7a
+                    totalG7eAvail = self.sub.forward_G7a
+                    while totalToFire != 0:
+                        target = int(input("Enter ship # from above to target."))
+                        target = target - 1
+                        if target < len(ship) or target > len(ship):
+                            break
+                        leftToFire = "G7a: " + totalG7aAvail + " " + "G7e: " + totalG7eAvail
+                        print(leftToFire)
+                        if totalG7aAvail > 0:
+                            G7aFire = -1
+                            while G7aFire < 0 or G7aFire > totalG7aAvail:
+                                G7aFire = int(input("Fire how many G7a torpedoes?"))
+                            ship[target].fireG7a(G7aFire)
+                            totalToFire = totalToFire - G7aFire
+                        if totalG7eAvail > 0:
+                            G7eFire = -1
+                            while G7eFire < 0 or G7eFire > totalG7eAvail:
+                                G7eFire = int(input("Fire how many G7e torpedoes?"))
+                            ship[target].fireG7e(G7eFire)
+                            totalToFire = totalToFire - G7eFire
+
+
+
+                case "2" | "Aft":
+                    if self.sub.aft_G7a == 0 and self.sub.aft_G7e == 0:
+                        break
+                    self.sub.printAftTubes()
+                    if self.sub.aft_G7a > 0 and self.sub.aft_G7e > 0:
+                        numG7aToFire = int(input("Enter # of G7a torpedoes to fire:"))
+                        numG7eToFire = int(input("Enter # of G7e torpedoes to fire:"))
+                    elif self.sub.forward_G7a > 0:
+                        numG7aToFire = int(input("Enter # of G7a torpedoes to fire:"))
+                    elif self.sub.forward_g7e > 0:
+                        numG7eToFire = int(input("Enter # of G7e torpedoes to fire:"))
+                    else:
+                        print("Error!")
+                    if numG7aToFire > self.sub.aft_G7a or numG7eToFire > self.sub.aft_G7e:
+                        break
+                case "3" | "Deck" | "Deck Gun":
+                    if self.sub.deck_gun_ammo == 0:
+                        break
+                    if self.sub.deck_gun_ammo >= 2:
+                        deckGunToFire = 2
+                    else:
+                        deckGunToFire = 1
+            notValid = False
+        #TODO now need to determine which attacks go to which target(s)
+
+        notValid = True
+        while notValid:
+            if wep1 == "1" or wep1 == "2":
+
 
 
     def getShips(self, enc):
@@ -912,6 +1049,9 @@ class Game():
 
         if enc == "Tanker":
             tgt.append(Ship("Tanker"))
+
+        if enc == "Capital Ship":
+            tgt.append(Ship("Capital Ship"))
 
         if enc == "Ship" or enc == "Two Ships" or enc == "Convoy" or enc == "Ship + Escort" or enc == "Two Ships + Escort":
             tgt.append(Ship(self.getTargetShipType()))
@@ -933,6 +1073,10 @@ class Game():
             return "Large Freighter"
         else:
             return "Tanker"
+
+    def escortDetection(self):
+        #TODO
+        print("yes")
 
 def gameover():
     print("GAMEOVER!")
