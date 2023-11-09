@@ -1,66 +1,66 @@
-#Kyle Breen-Bondie - Hunters: Uboat Board Game Recreation
+# Kyle Breen-Bondie - Hunters: Uboat Board Game Recreation
 import random
 import os
 import time
 
+
 class Submarine():
     """Player's Submarine"""
 
-    def __init__(self,subClass):
-        self.subClass = subClass   # submarine type (IE: VIIC)
+    def __init__(self, subClass):
+        self.subClass = subClass  # submarine type (IE: VIIC)
 
         match subClass:
             case "VIIA":
-                self.patrol_length = 3              # number of spaces during patrols
-                self.hull_hp = 7                    # total hull damage before sinking
-                self.flooding_hp = 7                # total flooding damage before surfacing
-                self.G7a = 6                        # default load of G7a steam torpedoes
-                self.G7e = 5                        # default load of G7e electric torpedoes
-                self.forward_tubes = 4              # number of forward torpedo tubes
-                self.aft_tubes = 1                  # number of aft torpedo tubes
-                self.torpedo_type_spread = 1        # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10             # current ammo for deck gun
-                self.deck_gun_cap = 10              # sub's deck gun ammo capacity
-                self.reserves_aft = 0               # number of aft torpedo roloads
+                self.patrol_length = 3  # number of spaces during patrols
+                self.hull_hp = 7  # total hull damage before sinking
+                self.flooding_hp = 7  # total flooding damage before surfacing
+                self.G7a = 6  # default load of G7a steam torpedoes
+                self.G7e = 5  # default load of G7e electric torpedoes
+                self.forward_tubes = 4  # number of forward torpedo tubes
+                self.aft_tubes = 1  # number of aft torpedo tubes
+                self.torpedo_type_spread = 1  # plus/minus of steam / electric torpedo mix
+                self.deck_gun_ammo = 10  # current ammo for deck gun
+                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
+                self.reserves_aft = 0  # number of aft torpedo roloads
             case "VIIB" | "VIIC":
-                self.patrol_length = 4              # number of spaces during patrols
-                self.hull_hp = 8                    # total hull damage before sinking
-                self.flooding_hp = 8                # total flooding damage before surfacing
-                self.G7a = 8                        # default load of G7a steam torpedoes
-                self.G7e = 6                        # default load of G7e electric torpedoes
-                self.forward_tubes = 4              # number of forward torpedo tubes
-                self.aft_tubes = 1                  # number of aft torpedo tubes
-                self.torpedo_type_spread = 3        # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10             # current ammo for deck gun
-                self.deck_gun_cap = 10              # sub's deck gun ammo capacity
-                self.reserves_aft = 1               # number of aft torpedo reloads
+                self.patrol_length = 4  # number of spaces during patrols
+                self.hull_hp = 8  # total hull damage before sinking
+                self.flooding_hp = 8  # total flooding damage before surfacing
+                self.G7a = 8  # default load of G7a steam torpedoes
+                self.G7e = 6  # default load of G7e electric torpedoes
+                self.forward_tubes = 4  # number of forward torpedo tubes
+                self.aft_tubes = 1  # number of aft torpedo tubes
+                self.torpedo_type_spread = 3  # plus/minus of steam / electric torpedo mix
+                self.deck_gun_ammo = 10  # current ammo for deck gun
+                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
+                self.reserves_aft = 1  # number of aft torpedo reloads
             case "IXA":
-                self.patrol_length = 5              # number of spaces during patrols
-                self.hull_hp = 8                    # total hull damage before sinking
-                self.flooding_hp = 8                # total flooding damage before surfacing
-                self.G7a = 12                       # default load of G7a steam torpedoes
-                self.G7e = 10                       # default load of G7e electric torpedoes
-                self.forward_tubes = 4              # number of forward torpedo tubes
-                self.aft_tubes = 2                  # number of aft torpedo tubes
-                self.torpedo_type_spread = 4        # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 5              # current ammo for deck gun
-                self.deck_gun_cap = 5               # sub's deck gun ammo capacity
-                self.reserves_aft = 2               # number of aft torpedo reloads
+                self.patrol_length = 5  # number of spaces during patrols
+                self.hull_hp = 8  # total hull damage before sinking
+                self.flooding_hp = 8  # total flooding damage before surfacing
+                self.G7a = 12  # default load of G7a steam torpedoes
+                self.G7e = 10  # default load of G7e electric torpedoes
+                self.forward_tubes = 4  # number of forward torpedo tubes
+                self.aft_tubes = 2  # number of aft torpedo tubes
+                self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
+                self.deck_gun_ammo = 5  # current ammo for deck gun
+                self.deck_gun_cap = 5  # sub's deck gun ammo capacity
+                self.reserves_aft = 2  # number of aft torpedo reloads
             case "IXB":
-                self.patrol_length = 6              # number of spaces during patrols
-                self.hull_hp = 8                    # total hull damage before sinking
-                self.flooding_hp = 9                # total flooding damage before surfacing
-                self.G7a = 12                       # default load of G7a steam torpedoes
-                self.G7e = 10                       # default load of G7e electric torpedoes
-                self.forward_tubes = 4              # number of forward torpedo tubes
-                self.aft_tubes = 2                  # number of aft torpedo tubes
-                self.torpedo_type_spread = 4        # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 5              # current ammo for deck gun
-                self.deck_gun_cap = 5               # sub's deck gun ammo capacity
-                self.reserves_aft = 2               # number of aft torpedo reloads
+                self.patrol_length = 6  # number of spaces during patrols
+                self.hull_hp = 8  # total hull damage before sinking
+                self.flooding_hp = 9  # total flooding damage before surfacing
+                self.G7a = 12  # default load of G7a steam torpedoes
+                self.G7e = 10  # default load of G7e electric torpedoes
+                self.forward_tubes = 4  # number of forward torpedo tubes
+                self.aft_tubes = 2  # number of aft torpedo tubes
+                self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
+                self.deck_gun_ammo = 5  # current ammo for deck gun
+                self.deck_gun_cap = 5  # sub's deck gun ammo capacity
+                self.reserves_aft = 2  # number of aft torpedo reloads
 
-            #TODO VIID, VIIC Flak
-
+            # TODO VIID, VIIC Flak
 
         self.hull_Damage = 0  # current amount of hull damage
         self.flooding_Damage = 0  # current amount of flooding
@@ -91,7 +91,7 @@ class Submarine():
 
         # crew states & ranks
         self.crew_level = 1  # 0=green,  1=trained,  2=veteran,  3=elite
-        self.crew1 = 0       # 0=fine,   1=lw        2=sw        4=kia
+        self.crew1 = 0  # 0=fine,   1=lw        2=sw        4=kia
         self.crew2 = 0
         self.crew3 = 0
         self.crew4 = 0
@@ -109,7 +109,7 @@ class Submarine():
         return self.subClass
 
     def torpedoResupply(self):
-        #TODO Resupply for minelaying missions (remove tubes and replace with mines)
+        # TODO Resupply for minelaying missions (remove tubes and replace with mines)
         print("Submarine Resupply - You are given ", self.G7a, "(steam) and ", self.G7e, "(electric) torpedoes.")
         print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
         SA = -1
@@ -118,7 +118,7 @@ class Submarine():
             SA = int(input())
         self.G7a = self.G7a + SA
         self.G7e = self.G7e - SA
-        if SA == 0: #if player did not add steam and remove electrics
+        if SA == 0:  # if player did not add steam and remove electrics
             SE = -1
             while SE < 0 or SE > self.torpedo_type_spread:
                 print("Current # of electric torpedoes to add. 0 -", self.torpedo_type_spread)
@@ -126,7 +126,7 @@ class Submarine():
             self.G7a = self.G7a - SE
             self.G7e = self.G7e + SE
 
-        #ask player how many steam torpedoes to load forward
+        # ask player how many steam torpedoes to load forward
         f1 = -1
         print("Number of forward tubes: ", self.forward_tubes)
         while f1 < 0 or f1 > self.forward_tubes:
@@ -134,7 +134,7 @@ class Submarine():
         self.forward_G7a = f1
         self.forward_G7e = self.forward_tubes - f1
 
-        #ask player how many steam torpedoes to load aft
+        # ask player how many steam torpedoes to load aft
         f2 = -1
         print("Number of aft tubes: ", self.aft_tubes)
         while f2 < 0 or f2 > self.aft_tubes:
@@ -142,7 +142,7 @@ class Submarine():
         self.aft_G7a = f2
         self.aft_G7e = self.aft_tubes - f2
 
-        #ask player how many steam torpedoes for aft reserve(s)
+        # ask player how many steam torpedoes for aft reserve(s)
         if self.reserves_aft > 0 and self.G7a - f1 - f2 > 0:
             print("Remaining G7a steam topedoes: ", self.G7a - f1 - f2)
             f3 = -1
@@ -150,7 +150,7 @@ class Submarine():
                 f3 = int(input("Enter # of G7a to load into the aft reserves."))
             self.reloads_aft_G7a = f3
             self.reloads_aft_G7e = self.reserves_aft - f3
-        elif self.G7a == 0 and self.reserves_aft > 0:      #if there are no steam & aft reserves, fill with electrics
+        elif self.G7a == 0 and self.reserves_aft > 0:  # if there are no steam & aft reserves, fill with electrics
             self.aft_G7e = self.reserves_aft
 
         self.reloads_forward_G7a = self.G7a - self.forward_G7a - self.aft_G7a - self.reloads_aft_G7a  # number of reloads forward of G7a
@@ -159,15 +159,33 @@ class Submarine():
         self.deck_gun_ammo = self.deck_gun_cap
 
     def subSupplyPrintout(self):
-        #print("Forward Tubes:", self.forward_tubes, "G7a:", self.forward_G7a, "G7e:", self.forward_G7e)
-        #print("Forward Reserves:  G7a:", self.reloads_forward_G7a, "G7e:", self.reloads_forward_G7e)
-        #print("Aft Tubes:", self.aft_tubes, "G7a:", self.aft_G7a, "G7e:", self.aft_G7e)
-        #print("Aft Reserves:  G7a:", self.reloads_aft_G7a, "G7e:", self.reloads_aft_G7e)
+        # print("Forward Tubes:", self.forward_tubes, "G7a:", self.forward_G7a, "G7e:", self.forward_G7e)
+        # print("Forward Reserves:  G7a:", self.reloads_forward_G7a, "G7e:", self.reloads_forward_G7e)
+        # print("Aft Tubes:", self.aft_tubes, "G7a:", self.aft_G7a, "G7e:", self.aft_G7e)
+        # print("Aft Reserves:  G7a:", self.reloads_aft_G7a, "G7e:", self.reloads_aft_G7e)
 
-        print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/", self.reloads_forward_G7e)
+        print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
+              self.reloads_forward_G7e)
         print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
               self.reloads_aft_G7e)
         print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
+
+    def reloadForward(self):
+        print("Forward Reserves:  G7a:", self.reloads_forward_G7a, "G7e:", self.reloads_forward_G7e)
+        if self.reloads_forward_G7a > 0:
+            f1 = -1
+            print("Number of forward tubes: ", self.forward_tubes)
+            while f1 < 0 or f1 > self.forward_tubes or f1 > self.reloads_forward_G7a:
+                f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
+            self.forward_G7a = f1
+            self.reloads_forward_G7a = self.reloads_forward_G7a - f1
+        if self.forward_G7a < self.forward_tubes and self.reloads_forward_G7e > 0:
+            f1 = -1
+            while f1 < 0 or f1 > self.forward_tubes or f1 > self.reloads_forward_G7e:
+                f1 = int(input("Enter # of  G7e electric torpedoes to load in the forward tubes: "))
+            self.forward_G7e = f1
+            self.reloads_forward_G7e = self.reloads_forward_G7e - f1
+        self.subSupplyPrintout()
 
     def printForwardTubes(self):
         print("Forward Tubes:", self.forward_tubes, "G7a:", self.forward_G7a, "G7e:", self.forward_G7e)
@@ -184,8 +202,70 @@ class Submarine():
         else:
             return False
 
+    def diveToTestDepth(self):
+        self.hull_Damage = self.hull_Damage + 1
+        crushdamage = d6Rollx2()
+        print("Depth damage roll: ", crushdamage)
+        if crushdamage < self.hull_Damage:
+            print("The hull creaks until... CRUSH")
+            gameover()
+        elif crushdamage == self.hull_Damage:
+            print("The hull strains under the pressure. Taking additional damage...")
+            self.diveToTestDepth()
+        else:
+            print("The U-boat takes the pressure of the depths admirably.")
+
+    def attacked(self, attackDepth, mod, year, airAttack=False):
+        attackRoll = d6Rollx2()
+        attackMods = 0
+        if self.fuel_tanks >= 1:
+            attackMods += 1
+        if self.hydrophones >= 1:
+            attackMods += 1
+        if self.batteries >= 1:
+            attackMods += 1
+        if self.e_engine1 >= 1:
+            attackMods += 1
+        if self.e_engine2 >= 1:
+            attackMods += 1
+        attackMods = attackMods + mod
+        if year >= 1943:
+            attackMods += 1
+        if airAttack:
+            attackMods += 2
+
+        print("Taking damage! Roll: ", attackRoll, "Modifiers: ", attackMods)
+
+        match attackRoll + attackMods:
+            case 2 | 3:
+                print("Their depth charges were ineffective!")
+            case 4 | 5 | 6:
+                print("1 hit on the sub!")
+                self.damage(1)
+            case 7 | 8:
+                print("2 hits on the sub!")
+                self.damage(2)
+            case 9 | 10:
+                print("3 hits on the sub!")
+                self.damage(3)
+            case 11:
+                print("4 hits on the sub!")
+                self.damage(4)
+            case 12:
+                print("5 hits on the sub!!")
+                self.damage(5)
+            case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
+                print("Too much damage sir, we're taking on too much water!!")
+                gameover()
+
+
+    def damage(self, numOfHits):
+        #TODO
+        print("TODO")
+
+
 class Ship():
-    type = ""   #small freighter, large freighter, tanker, warship or capital ship
+    type = ""  # small freighter, large freighter, tanker, warship or capital ship
     hp = 0
     damage = 0
     name = ""
@@ -193,7 +273,7 @@ class Ship():
     clss = ""
     sunk = False
 
-    def __init__(self, type, loc = ""):
+    def __init__(self, type, loc=""):
         self.type = type
         self.G7aINCOMING = 0
         self.G7eINCOMING = 0
@@ -208,10 +288,10 @@ class Ship():
                     lines = fp.readlines()
                     if loc == "North America":
                         print("Get NA small freighter from end of list")
-                        #TODO add NA freighters AFTER regular freighters
-                        #TODO get lines[randomint] of 101-120 or whatever
+                        # TODO add NA freighters AFTER regular freighters
+                        # TODO get lines[randomint] of 101-120 or whatever
                     else:
-                        entry = lines[random.randint(1,25)]   #TODO finish small freighter .txt and increase to 100
+                        entry = lines[random.randint(1, 25)]  # TODO finish small freighter .txt and increase to 100
                     entry = entry.split("-")
                     self.name = entry[0]
                     self.GRT = int(entry[1])
@@ -221,10 +301,10 @@ class Ship():
                     lines = fp.readlines()
                     if loc == "North America":
                         print("Get NA ship from end of list")
-                        #TODO add NA freighters AFTER regular freighters
-                        #TODO get lines[randomint] of 101-120 or whatever
+                        # TODO add NA freighters AFTER regular freighters
+                        # TODO get lines[randomint] of 101-120 or whatever
                     else:
-                        entry = lines[random.randint(1, 3)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
+                        entry = lines[random.randint(1, 25)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
                     entry = entry.split("-")
                     self.name = entry[0]
                     self.GRT = int(entry[1])
@@ -239,26 +319,29 @@ class Ship():
             case "Escort":
                 with open("Escort.txt", "r") as fp:
                     lines = fp.readlines()
-                    entry = lines[random.randint(1,669)]
+                    entry = lines[random.randint(1, 669)]
                     entry = entry.split("#")
                     self.name = entry[0]
                     self.clss = entry[1]
                     self.GRT = int(entry[2])
-                    self.hp = 4 #TODO doublecheck HP on escorts
+                    self.hp = 4  # TODO doublecheck HP on escorts
                     self.damage = 0
                     self.sunk = False
 
             case "Capital Ship":
-                #TODO - add capital ship.txt etc
+                # TODO - add capital ship.txt etc
                 print("TODO")
 
     def __str__(self):
         s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"
         return s
-    def fireG7a(self,num):
+
+    def fireG7a(self, num):
         self.G7aINCOMING = self.G7eINCOMING + num
-    def fireG7e(self,num):
+
+    def fireG7e(self, num):
         self.G7eINCOMING = self.G7eINCOMING + num
+
     def hasTorpedoesIncoming(self):
         if self.G7aINCOMING > 0 or self.G7eINCOMING > 0:
             return True
@@ -270,20 +353,28 @@ class Ship():
 
     def resetG7e(self):
         self.G7eINCOMING = 0
+
     def removeG7a(self):
         self.G7aINCOMING = self.G7aINCOMING - 1
+
     def removeG7e(self):
         self.G7eINCOMING = self.G7eINCOMING - 1
+
     def takeDamage(self, dam):
-        self.damage = self.damage - dam
+        self.damage = self.damage + dam
         if self.damage >= self.hp:
             self.sunk = True
+
+
 def d6Roll():
     roll = random.randint(1, 6)
     return roll
+
+
 def d6Rollx2():
     roll = d6Roll() + d6Roll()
     return roll
+
 
 class Game():
 
@@ -300,16 +391,19 @@ class Game():
         self.kmdt = input("Enter Kommandant name: ")
         self.id = input("Enter U-Boat #: ")
         self.sub.torpedoResupply()
-        self.rank = ["Oberleutnant zur See", "Kapitän-leutnant", "Korvetten-kapitän", "Fregatten-kapitän", "Kapitän zur See"]
+        self.rank = ["Oberleutnant zur See", "Kapitän-leutnant", "Korvetten-kapitän", "Fregatten-kapitän",
+                     "Kapitän zur See"]
         self.rankMod = 0
         self.establishFirstRank()
         self.sub.subSupplyPrintout()
         print("---------------")
         print("Guten Tag,", self.rank[self.rankMod], "- The date is", self.getFullDate())
         self.currentOrders = ""
-        self.patrolCount = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
-                  "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth",
-                  "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third", "twenty-fourth"]
+        self.patrolCount = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth",
+                            "tenth",
+                            "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth",
+                            "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third",
+                            "twenty-fourth"]
         self.patrolNum = 1
         self.randomEvent = False
         self.currentLocationStep = 0
@@ -320,8 +414,10 @@ class Game():
 
     def getMonth(self):
         return self.date_month
+
     def getYear(self):
         return self.date_year
+
     def getFullDate(self):
         toReturn = self.month[self.date_month] + " - " + str(self.date_year)
         return toReturn
@@ -353,6 +449,7 @@ class Game():
                 self.rankMod = 1
             else:
                 self.rankMod = 0
+
     def chooseSub(self):
         print("1. VIIA (Start date Sept-39)")
         print("2. VIIB (Start date Sept-39)")
@@ -409,7 +506,7 @@ class Game():
                     else:
                         self.getPatrol(self.date_month, self.date_year, d6Roll(), self.sub.getType(), False)
         else:
-            self.getPatrol(self.date_month,self.date_year,d6Roll(),self.sub.getType(), False)
+            self.getPatrol(self.date_month, self.date_year, d6Roll(), self.sub.getType(), False)
         print("Patrol Assignment:", self.currentOrders)
         depart = "U-" + str(self.id) + " departs port early before dawn for " + self.rank[
             self.rankMod] + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
@@ -420,16 +517,16 @@ class Game():
     def getPatrolLength(self, patrol):
         match patrol:
             case "North America" | "Caribbean":
-                return self.sub.patrol_length + 8 #NA patrol has normal 2 BoB + 2 transits + extra 4 transits
+                return self.sub.patrol_length + 8  # NA patrol has normal 2 BoB + 2 transits + extra 4 transits
             case _:
                 return self.sub.patrol_length + 4
 
     def pickPatrol(self):
-        #TODO open correct patrol chart and prompt response from user of those choices MAYBE NOT NEEDED
+        # TODO open correct patrol chart and prompt response from user of those choices MAYBE NOT NEEDED
         print("TODO")
 
     def getPatrol(self, month, year, roll, subClass, pickingPatrol):
-        if year == 1939 or (month <= 2 and year == 1940):           #1939 - Mar 1940
+        if year == 1939 or (month <= 2 and year == 1940):  # 1939 - Mar 1940
             with open("PatrolChart1.txt", "r") as fp:
                 lines = fp.readlines()
                 if pickingPatrol:
@@ -437,8 +534,8 @@ class Game():
                     inp = input("Pick your orders (Case-sensitive): ")
                     orders = inp
                 else:
-                    orders = lines [roll-2]
-        elif month > 2 and month <= 5 and year == 1940:             #1940 - Apr - Jun
+                    orders = lines[roll - 2]
+        elif month > 2 and month <= 5 and year == 1940:  # 1940 - Apr - Jun
             with open("PatrolChart2.txt", "r") as fp:
                 lines = fp.readlines()
                 if pickingPatrol:
@@ -447,7 +544,7 @@ class Game():
                     orders = inp
                 else:
                     orders = lines[roll - 2]
-        elif month > 5 and month <= 11 and year == 1940:            #1940 - Jul - Dec
+        elif month > 5 and month <= 11 and year == 1940:  # 1940 - Jul - Dec
             with open("PatrolChart3.txt", "r") as fp:
                 lines = fp.readlines()
                 if pickingPatrol:
@@ -460,7 +557,7 @@ class Game():
 
         orders = self.validatePatrol(orders)
 
-        #change time on station (onStationSteps) by one less if North American Orders
+        # change time on station (onStationSteps) by one less if North American Orders
         if orders == "North America" or orders == "Caribbean":
             self.onStationSteps = self.sub.patrol_length - 1
         elif "Minelaying" in orders or "Abwehr" in orders:
@@ -468,13 +565,14 @@ class Game():
         else:
             self.onStationSteps = self.sub.patrol_length
 
-        #strip any stray returns that may have gotten into the orders string
+        # strip any stray returns that may have gotten into the orders string
         orders = orders.strip('\n')
 
         self.currentOrders = orders
 
     def validatePatrol(self, orders):
         """Deal with changes in orders based on U-Boat type"""
+        # noinspection PyUnresolvedReferences
         if orders == "Mediterranean" or orders == "Artic" and (self.subClass == "IXA" or self.subClass == "IXB"):
             orders = "West African Coast"
         if orders == "West African Coast" or orders == "Caribbean" and (
@@ -483,7 +581,7 @@ class Game():
         if orders == "British Isles" and self.subClass == "VIID":
             orders = "British Isles (Minelaying)"
 
-        #deal with permanent stations
+        # deal with permanent stations
         if self.permMedPost:
             orders == "Mediterranean"
         if self.permArcPost:
@@ -500,7 +598,7 @@ class Game():
     def patrol(self):
         """Full patrol loop accounting for leaving porn, transiting, patrolling and returning"""
 
-        if self.currentOrders == "Arctic":   #if Artic patrol, roll to see if permanently assigned to Arctic
+        if self.currentOrders == "Arctic":  # if Artic patrol, roll to see if permanently assigned to Arctic
             if d6Roll() <= 3:
                 print("You've been assigned permanently to the Arctic.")
                 self.permArcPost = True
@@ -508,20 +606,26 @@ class Game():
         while self.currentLocationStep <= self.getPatrolLength(self.currentOrders):
 
             currentBox = self.getLocation(self.currentOrders, self.currentLocationStep)
-            #if sub is patrolling area (not in transit)
+            # if sub is patrolling area (not in transit)
             if currentBox == self.currentOrders:
                 self.onStationSteps -= 1
             self.getEncounter(currentBox, self.date_year, self.randomEvent)
 
-            #end of loop - go to next box of patrol
+            # end of loop - go to next box of patrol
             self.currentLocationStep += 1
 
-        if self.currentOrders == "Mediterranean":   #if it was a Med patrol, set U boat permanently to Med
+        if self.currentOrders == "Mediterranean":  # if it was a Med patrol, set U boat permanently to Med
             self.permMedPost = True
 
     def portReturn(self):
         print("You've made it home!")
-
+        totalTonnage = 0
+        for x in range(len(self.shipsSunk)):
+            totalTonnage = totalTonnage + self.shipsSunk[x].GRT
+        print("You've sunk", totalTonnage, "tons.")
+        for x in range(len(self.shipsSunk)):
+            print(self.shipsSunk[x])
+        # TODO: crew increasing rank (3 patrols), captain promotion (1 year), healing, repair and rearm
 
     def getLocation(self, patrol, step):
         """Gets current location box to determine encounter (transit, Atlantic, etc)"""
@@ -591,7 +695,6 @@ class Game():
                 else:
                     return patrol
 
-
     def getEncounter(self, loc, year, randomEvent):
         """Determines which location encounter chart to use, then rolls against and returns the string encounter name"""
         roll = d6Rollx2()
@@ -600,18 +703,18 @@ class Game():
             print("Random Event! TODO")
             return "Random Event"
 
-        #determine if this is a mission box to roll against mission
-        if (loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+        # determine if this is a mission box to roll against mission
+        if (
+                loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
             loc = "Mission"
         if loc == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
             loc = "Mission"
-
 
         match loc:
             case "Transit":  # Transit encounter chart
                 match roll:
                     case 2 | 3:
-                        #aircraft
+                        # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case 12:
                         self.encounterAttack("Ship")
@@ -629,7 +732,7 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Atlantic":  # Atlantic encounter chart
                 match roll:
@@ -640,7 +743,7 @@ class Game():
                     case 6 | 7 | 9 | 12:
                         self.encounterAttack("Convoy")
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "British Isles":  # British Isles encounter chart
                 match roll:
@@ -656,7 +759,7 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Caribbean":  # Carribean encounter chart
                 match roll:
@@ -670,7 +773,7 @@ class Game():
                     case 9 | 10:
                         return "Tanker"
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Mediterranean":  # Mediterranean encounter chart
                 match roll:
@@ -686,7 +789,7 @@ class Game():
                     case 10:
                         self.encounterAttack("Two Ships + Escort")
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "North America":  # North American encounter chart
                 match roll:
@@ -704,7 +807,7 @@ class Game():
                     case 11:
                         self.encounterAttack("Convoy")
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Norway":  # Norway encounter chart
                 match roll:
@@ -716,7 +819,7 @@ class Game():
                     case 4 | 9 | 10:
                         self.encounterAttack("Ship + Escort")
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Spanish Coast":  # Spanish Coast encounter chart
                 match roll:
@@ -730,7 +833,7 @@ class Game():
                     case 10 | 11:
                         self.encounterAttack("Convoy")
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "West African Coast":  # West African Coast encounter chart
                 match roll:
@@ -746,7 +849,7 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Additional Round of Combat" | "Gibraltar Passage":
                 if year == 1942:
@@ -765,7 +868,7 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
             case "Bay of Biscay" | "Mission":
                 if year == 1942 and loc == "Bay of Biscay":
@@ -779,7 +882,7 @@ class Game():
                         # aircraft
                         self.encounterAircraft(self.sub, self.date_year, self.currentOrders)
                     case _:
-                        #no encounter
+                        # no encounter
                         self.encounterNone(loc)
 
     ##----------------------------------------------- PATROL BOXES (TO DETERMINE WHICH ENCOUNTER TO ROLL)
@@ -791,12 +894,13 @@ class Game():
             print("Your U-Boat sails on towards its assigned patrol area.")
         else:
             print("Your U-Boat turns around and heads for home.")
-        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year, self.randomEvent)
+        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year,
+                          self.randomEvent)
 
     def patrolBoxBayOfBiscay(self):
         print("Your U-Boat transits across the perilous Bay of Biscay.")
-        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year, self.randomEvent)
-
+        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.date_year,
+                          self.randomEvent)
 
     ##----------------------------------------------- ENCOUNTERS
 
@@ -814,7 +918,7 @@ class Game():
             case "Bay of Biscay":
                 print("You cross the Bay of Biscay without issues.")
             case "Mission":
-                #TODO ?
+                # TODO ?
                 print("Mission")
             case "Arctic" | "Norway":
                 match randResult:
@@ -847,7 +951,8 @@ class Game():
                     case 1:
                         print("This area of the Western waters appear to be empty.")
                     case 2:
-                        print("Nasty storms reduce visibility to nothing - ensuring you find nothing on this part of your patrol.")
+                        print(
+                            "Nasty storms reduce visibility to nothing - ensuring you find nothing on this part of your patrol.")
             case "Mediterranean" | "Spanish Coast" | "West African Coast":
                 match randResult:
                     case 0 | 1:
@@ -861,12 +966,12 @@ class Game():
                     case 1:
                         print("A foggy morning and some luck allow you to pass unnoticed through Gibraltar.")
                     case 2:
-                        print("A timely storm pushes several patrolling ships off station, allowing you to run straight through Gibraltar.")
+                        print(
+                            "A timely storm pushes several patrolling ships off station, allowing you to run straight through Gibraltar.")
             case "Additional Round of Combat":
-                #TODO
+                # TODO
                 print("TODO")
         time.sleep(2)
-
 
     def encounterAircraft(self, sub, year, patrolType):
         print("ALARM! Aircraft in sight! Rolling to crash dive!")
@@ -890,7 +995,8 @@ class Game():
                 drm -= 1
             case 1943:
                 drm -= 2
-        if (patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+        if (
+                patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
             drm -= 1
         if patrolType == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
             drm -= 1
@@ -915,7 +1021,7 @@ class Game():
             timeOfDay = "Day"
         else:
             timeOfDay = "Night"
-        #TODO deal with arctic times
+        # TODO deal with arctic times
         print(timeOfDay)
 
         bearing = random.randint(0, 359)
@@ -928,7 +1034,7 @@ class Game():
             toPrint = "Ships Spotted! Bearing " + str(bearing) + " course " + course[course1]
             print(toPrint)
 
-        #Print target ship(s)
+        # Print target ship(s)
         for s in range(len(ship)):
             strng = "• " + str(ship[s])
             print(strng)
@@ -937,10 +1043,10 @@ class Game():
         abort = input("Do you wish to attack? Y/N")
         match abort:
             case "n" | "N" | "no" | "No":
-                #break out of encounter
+                # break out of encounter
                 return exit
 
-        #ask to flip to day or night
+        # ask to flip to day or night
         if timeOfDay == "Night":
             flip = input("Do you wish to attempt to attempt to follow the target and attack during the day?")
         else:
@@ -954,23 +1060,23 @@ class Game():
                 else:
                     print("We successfully followed them.")
 
-        #choosing type of attack
+        # choosing type of attack
         if ship[0].type == "Escort" and timeOfDay == "Day":
             print("Periscope Depth!")
             depth = "Submerged"
         else:
-            typeofAttack = input ("Do you wish to attack submerged or surfaced?")
+            typeofAttack = input("Do you wish to attack: \n1) Surfaced\n2) Submerged")
             match typeofAttack:
-                case "Submerged" | "submerged" | "sub":
+                case "Submerged" | "submerged" | "sub" | "2":
                     print("Periscope Depth!")
                     depth = "Submerged"
-                case "Surface" | "surface" | "Surfaced" | "surfaced":
+                case "Surface" | "surface" | "Surfaced" | "surfaced" | "1":
                     print("Manning the UZO for surface attack!")
                     depth = "Surfaced"
 
-        #determine range
+        # determine range
         if ship[0].type == "Escort":
-            #print("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
+            # print("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3)Long Range")
             r = input("Choose Range:\n1) Close -WARNING ESCORT-\n2) Medium Range\n3) Long Range")
         else:
             r = input("Choose Range:\n1) Close\n2) Medium Range\n3) Long Range")
@@ -978,21 +1084,22 @@ class Game():
             case "1" | "Close":
                 if ship[0].type == "Escort":
                     self.escortDetection()
-                r = 8   #must hit on 8 or less
+                r = 8  # must hit on 8 or less
             case "2" | "Medium":
-                r = 7   #hit on 7 or less
+                r = 7  # hit on 7 or less
             case "3" | "Long":
-                r = 6   #hit on 6 or less
+                r = 6  # hit on 6 or less
 
-        #show and assign weps
+        # show and assign weps
         self.sub.subSupplyPrintout()
         if depth == "Surfaced" and ship[0].type != "Escort" and timeOfDay == "Night":
-            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
+            wep1 = input(
+                "How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
         elif depth == "Surfaced" and ship[0].type != "Escort":
-            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
+            wep1 = input("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
         else:
-            wep1 = input ("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
-        #TODO Need to validate engagement type (include in while loop?)
+            wep1 = input("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
+        # TODO Need to validate engagement type (include in while loop?) TODO- need option for fore and aft salvo
         notValid = True
         while notValid:
             match wep1:
@@ -1000,18 +1107,24 @@ class Game():
                     if self.sub.forward_G7a == 0 and self.sub.forward_G7e == 0:
                         continue
                     print("Targets:")
-                    for s in range (len(ship)):
-                        strng = str(s+1) + ") " + str(ship[s])
+                    for s in range(len(ship)):
+                        strng = str(s + 1) + ") " + str(ship[s])
                         print(strng)
 
                     totalToFire = self.sub.forward_G7a + self.sub.forward_G7e
-                    totalG7aAvail = self.sub.forward_G7a
-                    totalG7eAvail = self.sub.forward_G7e
+                    G7aFire = 0
+                    G7eFire = 0
                     while totalToFire != 0:
-                        target = int(input("Enter ship # from above to target."))
+                        totalToFire = self.sub.forward_G7a + self.sub.forward_G7e
+                        totalG7aAvail = self.sub.forward_G7a
+                        totalG7eAvail = self.sub.forward_G7e
+                        target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
+
                         target = target - 1
-                        if target < 0 or target > len(ship):
+                        if target < -1 or target > len(ship):
                             continue
+                        if target == -1:
+                            break
                         leftToFire = "G7a: " + str(totalG7aAvail) + " " + "G7e: " + str(totalG7eAvail)
                         print(leftToFire)
                         if totalG7aAvail > 0:
@@ -1020,12 +1133,14 @@ class Game():
                                 G7aFire = int(input("Fire how many G7a torpedoes?"))
                             ship[target].fireG7a(G7aFire)
                             totalToFire = totalToFire - G7aFire
+                            self.sub.forward_G7a = self.sub.forward_G7a - G7aFire
                         if totalG7eAvail > 0:
                             G7eFire = -1
                             while G7eFire < 0 or G7eFire > totalG7eAvail:
                                 G7eFire = int(input("Fire how many G7e torpedoes?"))
                             ship[target].fireG7e(G7eFire)
                             totalToFire = totalToFire - G7eFire
+                            self.sub.forward_G7e = self.sub.forward_G7e - G7eFire
 
                 case "2" | "Aft":
                     if self.sub.aft_G7a == 0 and self.sub.aft_G7e == 0:
@@ -1052,15 +1167,15 @@ class Game():
                         deckGunToFire = 1
             notValid = False
 
-        #resolve each torpedo by rolling and getting roll mods
-        for s in range (len(ship)):
-            while ship[s].hasTorpedoesIncoming:
+        # resolve each torpedo by rolling and getting roll mods
+        for s in range(len(ship)):
+            while ship[s].hasTorpedoesIncoming():
                 currentship = str(ship[s])
                 torpRoll = d6Rollx2()
                 rollMod = 0
                 if depth == "Surfaced":
-                    rollMod = rollMod -1
-                #TODO add mod for KC+Oakleaves award
+                    rollMod = rollMod - 1
+                # TODO add mod for KC+Oakleaves award
                 if self.sub.crew_level == 0:
                     rollMod += 1
                 if self.sub.crewKnockedOut():
@@ -1070,12 +1185,12 @@ class Game():
                         rollMod += 2
                     else:
                         rollMod += 1
-                #todo add mod for second salvo
+                # todo add mod for second salvo
                 if ship[s].G7aINCOMING > 0:
-                    print("Roll to hit:", torpRoll, "Modifiers:", rollMod)
+                    print("Roll to hit on", ship[s].name, ":", torpRoll, "Modifiers:", rollMod)
                     if torpRoll + rollMod <= r:
                         print("Hit! ", end="")
-                        #roll for dud
+                        # roll for dud
                         if self.wasDud("G7a"):
                             print("Torpedo was a dud!")
                             time.sleep(3)
@@ -1092,7 +1207,7 @@ class Game():
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(3)
                                 case 3:
-                                    print("Clean hit! (2)")
+                                    print("Serious damage! (2)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(2)
                                 case 4 | 5 | 6:
@@ -1105,14 +1220,16 @@ class Game():
                         ship[s].removeG7a()
                         time.sleep(3)
                 if ship[s].G7eINCOMING > 0:
-                    #TODO deal with electric torps fired
+                    # TODO deal with electric torps fired
                     print("Deal with Electric Torps")
 
             if ship[s].sunk:
-                print("Ship has been sunk!")
+                print(ship[s].name, "has been sunk!")
                 self.shipsSunk.append(ship[s])
                 time.sleep(3)
-
+        self.sub.reloadForward()
+        if ship[0].type == "Escort" and ship[0].sunk == False:
+            self.escortDetection(enc, range, depth, timeOfDay, False, G7aFire, G7eFire)
 
     def getShips(self, enc):
         tgt = []
@@ -1146,12 +1263,64 @@ class Game():
         else:
             return "Tanker"
 
-    def escortDetection(self):
-        #TODO
-        print("yes")
+    def escortDetection(self, enc, range, depth, timeOfDay, previouslyDetected, firedG7a, firedG7e):
+        attackDepth = depth
+        if depth != "Surfaced":
+            print("Current damage/HP: ", self.sub.hull_Damage, "/", self.sub.hull_hp)
+            testDive = input("Dive to test depth?")
+            match testDive:
+                case "yes" | "Yes" | "Y" | "y":
+                    self.sub.diveToTestDepth()
+                    depth = "Test Depth"
+        escortRoll = d6Rollx2()
+        #snake eyes automatic avoid detection
+        if escortRoll == 2:
+            "Our ship completely avoided detection!"
+            time.sleep(3)
+            return "SnakeEyes"
+        escortMods = 0
+        if self.date_year >= 1941 and range == 8:
+            escortMods = escortMods + (self.date_year - 1940)
+        # mod for KMDT is KC+O+S and close range
+        if self.sub.kmdt >= 2 and self.sub.WO1 >= 2:
+            escortMods += 2
+        elif self.sub.kmdt == 2:
+            escortMods += 1
+        if self.sub.fuel_tanks >= 1:
+            escortMods += 1
+        if self.sub.dive_planes >= 1:
+            escortMods += 1
+        if enc == "Capital Ship":
+            escortMods += 1
+        if firedG7a and timeOfDay == "Day":
+            escortMods += 1
+        if previouslyDetected:
+            escortMods += 1
+        if range == 8 and (firedG7a > 0 or firedG7e > 0):
+            escortMods += 1
+        if attackDepth == "Surfaced" and timeOfDay == "Night" and self.date_year >= 1941:
+            escortMods += 1
+        #TODO deal with forward + aft salvoes, wolfpack
+        if range == 6:
+            escortMods -= 1
+        if depth == "Test Depth":
+            escortMods -= 1
 
+        print("Escort Pinging! Escort roll:", escortRoll, "Escort Modifiers:", escortMods)
+        time.sleep(3)
+        if escortRoll + escortMods <= 8:
+            print("We've evaded detection!")
+            return "escaped"
+        elif escortRoll + escortMods <= 11:
+            print("Detected!")
+            self.sub.attacked(attackDepth, 0, self.date_year)
+        elif escortRoll + escortMods >= 12:
+            print("Detected! Big Problems!")
+            self.sub.attacked(attackDepth, 1, self.date_year)
+        time.sleep(3)
+        self.escortDetection(enc, range, depth, timeOfDay, True, firedG7a, firedG7e)
     def wasDud(self, torp):
-        #TODO superior torpedoes mod?
+        # TODO superior torpedoes mod?
         dudRoll = d6Roll()
         if self.date_year >= 1941:
             if dudRoll == 1:
@@ -1174,12 +1343,6 @@ class Game():
 
 def gameover():
     print("GAMEOVER!")
-
-
-
-
-
-
 
 
 Game()

@@ -1,4 +1,26 @@
 NOSHIP
-TestLarge1-6000
-TestLarge2-8000
-TestLarge3-11000
+Sultan Star-12300
+SS Browning-5300
+Manaar-5200
+Fanad Head-5200
+Kennebec-5500
+Louisiane-7000
+Lochavon-9200
+Bretagne-10000
+Vermont-5200
+City of Mandalay-7200
+Yorkshire-10000
+Clan Chisholm-7200
+Malabar-8000
+Bronte-5300
+Beaverburn-9900
+Rothesay Castle-7000
+Gustaf E. Reuter-6300
+Navasota-8800
+Brandon-6700
+Tajandoen-8200
+Royston Grange-5100
+Cedarbank-5200
+Protesilaus-9600
+Brazza-10500
+Clearton-5200
