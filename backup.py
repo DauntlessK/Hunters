@@ -41,3 +41,11 @@ elif step == self.patrolLength:
 # elif step == self.getPatrolLength() - 1 and patrol:
 else:
     print("ERROR GETTING LOCATION BOX")
+
+
+
+    def getTime(self):
+        month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+        year = str(Game.date_year)
+        toReturn = Game.month[Game.date_month] + " / " + year
+        return toReturn
