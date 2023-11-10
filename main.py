@@ -8,7 +8,26 @@ class Submarine():
     """Player's Submarine. Contains type, ammo, all damage-related stats, including crew health."""
 
     def __init__(self, subClass):
-        self.subClass = subClass  # submarine type (IE: VIIC)
+        self.subClass = subClass                # submarine type (IE: VIIC)
+
+        #--------SUBSYSTEM STATES
+        # states are: 0=operational, 1=damaged, 2=inoperational
+        self.systems = {
+            "Electric Engine #1" : 0,
+            "Electric Engine #2" : 0,
+            "Diesel Engine #1" : 0,
+            "Diesel Engine #2" : 0,
+            "Periscope" : 0,
+            "Radio" : 0,
+            "Hydrophones" : 0,
+            "Batteries" : 0,
+            "Forward Torpedo Doors" : 0,
+            "Aft Torpedo Doors": 0,
+            "Dive Planes" : 0,
+            "Fuel Tanks" : 0,
+            "Deck Gun" : 0,
+            "Flak Gun" : 0
+        }
 
         #set sub-specific info
         match subClass:
@@ -24,7 +43,7 @@ class Submarine():
                 self.deck_gun_ammo = 10         # current ammo for deck gun
                 self.deck_gun_cap = 10          # sub's deck gun ammo capacity
                 self.reserves_aft = 0           # number of aft torpedo roloads
-                self.large_flak = -1            # large (3.7) flak (-1 means not present)
+                self.systems["3.7 Flak"] = -1   # large (3.7) flak (-1 means not present)
             case "VIIB" | "VIIC":
                 self.patrol_length = 4          # number of spaces during patrols
                 self.hull_hp = 8                # total hull damage before sinking
@@ -37,7 +56,7 @@ class Submarine():
                 self.deck_gun_ammo = 10         # current ammo for deck gun
                 self.deck_gun_cap = 10          # sub's deck gun ammo capacity
                 self.reserves_aft = 1           # number of aft torpedo reloads
-                self.large_flak = -1            # large (3.7) flak (-1 means not present)
+                self.systems["3.7 Flak"] = -1   # large (3.7) flak (-1 means not present)
             case "IXA":
                 self.patrol_length = 5          # number of spaces during patrols
                 self.hull_hp = 8                # total hull damage before sinking
@@ -50,7 +69,7 @@ class Submarine():
                 self.deck_gun_ammo = 5          # current ammo for deck gun
                 self.deck_gun_cap = 5           # sub's deck gun ammo capacity
                 self.reserves_aft = 2           # number of aft torpedo reloads
-                self.large_flak = 0             # large (3.7) flak (-1 means not present)
+                self.systems["3.7 Flak"] = 0    # large (3.7) flak (-1 means not present)
             case "IXB":
                 self.patrol_length = 6          # number of spaces during patrols
                 self.hull_hp = 8                # total hull damage before sinking
@@ -63,7 +82,7 @@ class Submarine():
                 self.deck_gun_ammo = 5          # current ammo for deck gun
                 self.deck_gun_cap = 5           # sub's deck gun ammo capacity
                 self.reserves_aft = 2           # number of aft torpedo reloads
-                self.large_flak = 0             # large (3.7) flak (-1 means not present)
+                self.systems["3.7 Flak"] = 0    # large (3.7) flak (-1 means not present)
             case "VIID":
                 self.patrol_length = 5          # number of spaces during patrols
                 self.hull_hp = 8                # total hull damage before sinking
@@ -76,45 +95,29 @@ class Submarine():
                 self.deck_gun_ammo = 10         # current ammo for deck gun
                 self.deck_gun_cap = 10          # sub's deck gun ammo capacity
                 self.reserves_aft = 1           # number of aft torpedo reloads
-                self.large_flak = -1            # large (3.7) flak (-1 means not present)
+                self.systems["3.7 Flak"] = -1   # large (3.7) flak (-1 means not present)
 
             # TODO VIID, VIIC Flak  (Unsure if VIID is accurate)
 
         #---------Ammunition (what's in what torpedo tube) and overall damage indicators
-        self.hull_Damage = 0  # current amount of hull damage
-        self.flooding_Damage = 0  # current amount of flooding
-        self.forward_G7a = 0  # number of loaded G7a torpedoes (fore)
-        self.forward_G7e = 0  # number of loaded G7e torpedoes (fore)
-        self.aft_G7a = 0  # number of loaded G7a torpedoes (aft)
-        self.aft_G7e = 0  # number of loaded G7e torpedoes (aft)
-        self.reloads_forward_G7a = 0  # number of reloads forward of G7a
-        self.reloads_forward_G7e = 0  # number of reloads forward of G7e
-        self.reloads_aft_G7a = 0  # number of reloads aft of G7a
-        self.reloads_aft_G7e = 0  # number of reloads aft of G7e
+        self.hull_Damage = 0                    # current amount of hull damage
+        self.flooding_Damage = 0                # current amount of flooding
+        self.forward_G7a = 0                    # number of loaded G7a torpedoes (fore)
+        self.forward_G7e = 0                    # number of loaded G7e torpedoes (fore)
+        self.aft_G7a = 0                        # number of loaded G7a torpedoes (aft)
+        self.aft_G7e = 0                        # number of loaded G7e torpedoes (aft)
+        self.reloads_forward_G7a = 0            # number of reloads forward of G7a
+        self.reloads_forward_G7e = 0            # number of reloads forward of G7e
+        self.reloads_aft_G7a = 0                # number of reloads aft of G7a
+        self.reloads_aft_G7e = 0                # number of reloads aft of G7e
 
-        #--------SUBSYSTEM STATES
-        # states are: 0=operational, 1=damaged, 2=inoperational
-        self.e_engine1 = 0  # state of electric engine 1
-        self.e_engine2 = 0  # state of electric engine 2
-        self.d_engine1 = 0  # state of diesel engine 1
-        self.d_engine2 = 0  # state of diesel engine 2
-        self.periscope = 0
-        self.radio = 0
-        self.hydrophones = 0
-        self.batteries = 0
-        self.fwd_torp_doors = 0
-        self.aft_torp_doors = 0
-        self.dive_planes = 0
-        self.fuel_tanks = 0
-        self.deck_gun = 0
-        self.flak_gun = 0
-        #3.7 Flak
-        self.damageChart = ["batteries", "flooding", "crew injury", "periscope", "dive_planes", "e_engine1",
-                            "flooding", "e_engine2", "d_engine1", "flak_guns", "d_engine2", "large_flak",
-                            "flooding", "minor", "hull", "crew injury", "hull", "deck_gun",
-                            "hull", "radio", "flooding", "flooding", "hull", "flak_gun",
-                            "flooding", "hull", "crew injury", "floodingx2", "hull", "deck_gun",
-                            "hydrophones", "aft_torp_doors", "crew injuryx2", "fwd_torp_doors", "hullx2", "fuel_tanks"]
+        #used to roll against to get damage location on sub
+        self.damageChart = ["Batteries", "flooding", "crew injury", "Periscope", "Dive Planes", "Electric Engine #1",
+                            "flooding", "Electric Engine #2", "Diesel Engine #1", "Flak guns", "Diesel Engine #2", "3.7 Flak",
+                            "flooding", "minor", "hull", "crew injury", "hull", "Deck Gun",
+                            "hull", "Radio", "flooding", "flooding", "hull", "Flak Gun",
+                            "flooding", "hull", "crew injury", "floodingx2", "hull", "Deck Gun",
+                            "Hydrophones", "Aft Torpedo Doors", "crew injuryx2", "Forward Torpedo Doors", "hullx2", "Fuel Tanks"]
 
         #--------CREW STATES & TRAINING LEVELS
         self.crew_level = 1  # 0=green,  1=trained,  2=veteran,  3=elite
@@ -273,15 +276,15 @@ class Submarine():
         True as third value for an air attack. Mod (second param) is 1 when 12+ is rolled on detection."""
         attackRoll = d6Rollx2()
         attackMods = 0
-        if self.fuel_tanks >= 1:
+        if self.systems["Fuel Tanks"] >= 1:
             attackMods += 1
-        if self.hydrophones >= 1:
+        if self.systems["Hydrophones"] >= 1:
             attackMods += 1
-        if self.batteries >= 1:
+        if self.systems["Batteries"] >= 1:
             attackMods += 1
-        if self.e_engine1 >= 1:
+        if self.systems["Electric Engine #1"] >= 1:
             attackMods += 1
-        if self.e_engine2 >= 1:
+        if self.systems["Electric Engine #2"] >= 1:
             attackMods += 1
         attackMods = attackMods + mod
         if year >= 1943:
@@ -314,7 +317,6 @@ class Submarine():
                 print("Too much damage sir, we're taking on too much water!!")
                 gameover()
 
-
     def damage(self, numOfHits):
         """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
         for being sunk etc."""
@@ -342,72 +344,21 @@ class Submarine():
                 case "hullx2":
                     print("Major hull damage!")
                     self.hull_Damage += 2
-                case "batteries":
-                    print("Our batteries have taken a hit!")
-                    if self.batteries == 0:
-                        self.batteries = 1
-                case "periscope":
-                    print("Our periscope has been damaged!")
-                    if self.periscope == 0:
-                        self.periscope = 1
-                case "dive_planes":
-                    print("Our batteries have taken a hit!")
-                    if self.batteries == 0:
-                        self.batteries = 1
-                case "e_engine1":
-                    print("Eletric Engine #1 has been incapacitated!")
-                    if self.e_engine1 == 0:
-                        self.e_engine1 = 1
-                case "e_engine2":
-                    print("Eletric Engine #2 has been knocked out!")
-                    if self.e_engine2 == 0:
-                        self.e_engine2 = 1
-                case "d_engine1":
-                    print("Diesel Engine #1 has been damaged!")
-                    if self.d_engine1 == 0:
-                        self.d_engine1 = 1
-                case "d_engine2":
-                    print("Diesel Engine #2 has been hit!")
-                    if self.d_engine2 == 0:
-                        self.d_engine2 = 1
-                case "flak_guns":
-                    print("Flak guns have been hit!")
-                    if self.large_flak == 0:
-                        self.large_flak = 1
-                    if self.flak_gun == 0:
-                        self.flak_gun = 1
-                case "large_flak":
-                    print("3.7mm flak gun damage!")
-                    if self.large_flak == 0:
-                        self.large_flak = 1
-                case "minor":
-                    print("Minor damage. No damage to major systems.")
-                case "deck_gun":
-                    print("The deck gun has been knocked out!")
-                    if self.deck_gun == 0:
-                        self.deck_gun = 1
-                case "radio":
-                    print("Our radio has been smashed!")
-                    if self.radio == 0:
-                        self.radio = 1
-                case "hydrophones":
-                    print("The hydrophones has been incapacitated!")
-                    if self.hydrophones == 0:
-                        self.hydrophones = 1
-                case "aft_torp_doors":
-                    print("The aft torpedo doors are jammed shut!")
-                    if self.aft_torp_doors == 0:
-                        self.aft_torp_doors = 1
-                case "fwd_torp_doors":
-                    print("The forward torpoedo tubes have been damaged!")
-                    if self.fwd_torp_doors == 0:
-                        self.fwd_torp_doors = 1
-                case "fuel_tanks":
-                    print("A fuel tank has been hit! We are leaking fuel!")
-                    if self.fuel_tanks == 0:
-                        self.fuel_tanks = 1
+                case "Flak Guns":
+                    if self.systems["3.7 Flak Gun"] >= 0:
+                        print("Both flak guns have been damaged!")
+                        self.systems.update({"3.7 Flak Gun" : 1})
+                    else:
+                        print("Flak gun has been hit!")
+                    self.systems.update({"Flak Gun": 1})
                 case _:
-                    print("error getting damaged component")
+                    print("The " + damage + " has taken damage!")
+                    # damageVariation = d6Roll()
+                    # match damageVariation:
+                    #     case 1:
+                    #         print("The" + self.systems[damage].key + "have taken damage!")
+                    #     case 2:
+                    self.systems.update({damage : 1})
 
         time.sleep(3)
         #check if flooding took place this round and roll for additional flooding chance
@@ -435,6 +386,30 @@ class Submarine():
             print("The ship takes on too much water, forcing you to blow the ballast tanks and surface.")
             #todo scuttle
             gameover()
+
+    def printUboatDamagedandInoperable(self):
+        """Prints damaged and inoperable modules"""
+        print("Damaged: ", end="")
+        for key in self.systems:
+            if value == 1:
+                print(key, end=" ")
+
+    def printStatus(self):
+        print("Current damage/HP: ", self.hull_Damage, "/", self.hull_hp)
+        print("Current flooding/HP ", self.flooding_Damage, "/", self.flooding_hp)
+        print("Damaged systems: ", end="")
+        damagedTotal = countOf(self.systems.values(),1)
+        count = 0
+        if damagedTotal > 0
+            for key in self.systems:
+                if self.systems[key] == 1:
+                    if count < damagedTotal:
+                        print(key, end=", ")
+                    else:
+                        print(key)
+
+    def pumps(self):
+        self.flooding_Damage = 0
 
 
 class Ship():
@@ -1181,7 +1156,7 @@ class Game():
             drm += 1
         if sub.crewKnockedOut():
             drm -= 1
-        if sub.dive_planes > 0:
+        if sub.systems["Dive Planes"] > 0:
             drm -= 1
         if sub.subClass == "VIID" or sub.subClass == "IXA" or sub.subClass == "IXB":
             drm -= 1
@@ -1471,48 +1446,34 @@ class Game():
         """Called when an escort detection roll is required."""
         attackDepth = depth
 
+        escortRoll = d6Rollx2()
+        escortMods = 0
+
         #deal with close range detection before anything has been fired first, then deal with normal detection
         if range == 8 and firedG7a == 0 and firedG7e == 0 and previouslyDetected == False:
-            print("We've gotten too close! The escort has detected us before we could fire!")
-            self.sub.attacked(attackDepth, 0, self.getYear())
 
-            escortRoll = d6Rollx2()
-            # snake eyes automatic avoid detection
-            if escortRoll == 2:
-                "Our ship completely avoided detection!"
-                time.sleep(3)
-                return "SnakeEyes"
-            escortMods = 0
             if self.getYear() >= 1941 and range == 8:
                 escortMods = escortMods + (self.getYear() - 1940)
             #TODO mod for KMDT is KC+O+S and close range
-
         else:
             if depth != "Surfaced":
-                print("Current damage/HP: ", self.sub.hull_Damage, "/", self.sub.hull_hp)
+                #print("Current damage/HP: ", self.sub.hull_Damage, "/", self.sub.hull_hp)
+                self.sub.printStatus()
                 testDive = input("Dive to test depth?")
                 match testDive:
                     case "yes" | "Yes" | "Y" | "y":
                         self.sub.diveToTestDepth()
                         depth = "Test Depth"
-            escortRoll = d6Rollx2()
-            #snake eyes automatic avoid detection
-            if escortRoll == 2:
-                "Our ship completely avoided detection!"
-                time.sleep(3)
-                return "SnakeEyes"
-            escortMods = 0
             if self.getYear() >= 1941 and range == 8:
                 escortMods = escortMods + (self.getYear() - 1940)
             #TODO mod for KMDT is KC+O+S and close range
-
             if self.sub.kmdt >= 2 and self.sub.WO1 >= 2:
                 escortMods += 2
             elif self.sub.kmdt == 2:
                 escortMods += 1
-            if self.sub.fuel_tanks >= 1:
+            if self.sub.systems["Fuel Tanks"] >= 1:
                 escortMods += 1
-            if self.sub.dive_planes >= 1:
+            if self.sub.systems["Dive Planes"] >= 1:
                 escortMods += 1
             if enc == "Capital Ship":
                 escortMods += 1
@@ -1532,8 +1493,14 @@ class Game():
 
         print("Escort Pinging! Escort roll:", escortRoll, "Escort Modifiers:", escortMods)
         time.sleep(3)
+        # snake eyes automatic avoid detection
+        if escortRoll == 2:
+            "Our ship completely avoided detection!"
+            time.sleep(3)
+            return "SnakeEyes"
         if escortRoll + escortMods <= 8:
             print("We've evaded detection!")
+            self.sub.printStatus()
             time.sleep(2)
             return "escaped"
         elif escortRoll + escortMods <= 11:
@@ -1566,7 +1533,6 @@ class Game():
                 return False
             else:
                 return True
-
 
 def verifyYorN():
     """Input prompt for a Yes or No response. Returns 'Y' or 'N' string, otherwise loops endlessly"""
