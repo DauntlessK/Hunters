@@ -49,3 +49,41 @@ else:
         year = str(Game.date_year)
         toReturn = Game.month[Game.date_month] + " / " + year
         return toReturn
+
+
+        if year == 1939 or (month <= 2 and year == 1940):  # 1939 - Mar 1940
+            with open("PatrolChart1.txt", "r") as fp:
+                lines = fp.readlines()
+                if pickingPatrol:
+                    print(lines)
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
+                else:
+                    orders = lines[roll - 2]
+        elif month > 2 and month <= 5 and year == 1940:  # 1940 - Apr - Jun
+            with open("PatrolChart2.txt", "r") as fp:
+                lines = fp.readlines()
+                if pickingPatrol:
+                    print(lines)
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
+                else:
+                    orders = lines[roll - 2]
+        elif month > 5 and month <= 11 and year == 1940:  # 1940 - Jul - Dec
+            with open("PatrolChart3.txt", "r") as fp:
+                lines = fp.readlines()
+                if pickingPatrol:
+                    print(lines)
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
+                else:
+                    orders = lines[roll - 2]
+        elif month > 5 and month <= 11 and year == 1940:  # 1940 - Jul - Dec
+            with open("PatrolChart4.txt", "r") as fp:
+                lines = fp.readlines()
+                if pickingPatrol:
+                    print(lines)
+                    inp = input("Pick your orders (Case-sensitive): ")
+                    orders = inp
+                else:
+                    orders = lines[roll - 2]
