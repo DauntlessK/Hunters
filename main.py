@@ -214,7 +214,7 @@ class Submarine():
         if self.reloads_forward_G7a > 0:
             invalid = True
             print("Number of forward tubes: ", self.forward_tubes)
-            while (invalid):
+            while invalid:
                 f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
                 #check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
                 if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
@@ -1162,7 +1162,8 @@ class Game():
                         print("A foggy morning and some luck allow you to pass unnoticed through Gibraltar.")
                     case 2:
                         print(
-                            "A timely storm pushes several patrolling ships off station, allowing you to run straight through Gibraltar.")
+                            "A timely storm pushes several patrolling ships off station, allowing you to run straight "
+                            "through Gibraltar.")
             case "Additional Round of Combat":
                 # TODO
                 print("TODO")
