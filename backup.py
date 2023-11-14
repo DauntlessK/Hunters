@@ -175,3 +175,13 @@ case
 print("A fuel tank has been hit! We are leaking fuel!")
 if self.fuel_tanks == 0:
     self.fuel_tanks = 1
+
+    if depth == "Surfaced" and ship[0].type != "Escort" and timeOfDay == "Night":
+        wep1 = input(
+            "How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Fore and Aft Torpedo Salvo\n4) Deck Gun")
+    elif depth == "Surfaced" and ship[0].type != "Escort":
+        wep1 = input("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo\n3) Deck Gun")
+    else:
+        wep1 = input("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
+    # TODO Need to validate engagement type (include in while loop?) TODO- need option for fore and aft salvo
+    # TODO need to validate fore or aft torpedo doors, deck gun are not damaged / destroyed
