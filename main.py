@@ -3,561 +3,8 @@ import random
 import os
 import time
 from operator import *
-
-
-class Submarine():
-    """Player's Submarine. Contains type, ammo, all damage-related stats, including crew health."""
-
-    def __init__(self, subClass):
-        self.subClass = subClass  # submarine type (IE: VIIC)
-
-        # --------SUBSYSTEM STATES
-        # states are: 0=operational, 1=damaged, 2=inoperational
-        self.systems = {
-            "Electric Engine #1": 0,
-            "Electric Engine #2": 0,
-            "Diesel Engine #1": 0,
-            "Diesel Engine #2": 0,
-            "Periscope": 0,
-            "Radio": 0,
-            "Hydrophones": 0,
-            "Batteries": 0,
-            "Forward Torpedo Doors": 0,
-            "Aft Torpedo Doors": 0,
-            "Dive Planes": 0,
-            "Fuel Tanks": 0,
-            "Deck Gun": 0,
-            "Flak Gun": 0
-        }
-
-        # set sub-specific info
-        match subClass:
-            case "VIIA":
-                self.patrol_length = 3  # number of spaces during patrols
-                self.hull_hp = 7  # total hull damage before sinking
-                self.flooding_hp = 7  # total flooding damage before surfacing
-                self.G7a = 6  # default load of G7a steam torpedoes
-                self.G7e = 5  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 1  # number of aft torpedo tubes
-                self.torpedo_type_spread = 1  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10  # current ammo for deck gun
-                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
-                self.reserves_aft = 0  # number of aft torpedo roloads
-                self.systems["3.7 Flak"] = -1  # large (3.7) flak (-1 means not present)
-            case "VIIB" | "VIIC":
-                self.patrol_length = 4  # number of spaces during patrols
-                self.hull_hp = 8  # total hull damage before sinking
-                self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 8  # default load of G7a steam torpedoes
-                self.G7e = 6  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 1  # number of aft torpedo tubes
-                self.torpedo_type_spread = 3  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10  # current ammo for deck gun
-                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
-                self.reserves_aft = 1  # number of aft torpedo reloads
-                self.systems["3.7 Flak"] = -1  # large (3.7) flak (-1 means not present)
-            case "IXA":
-                self.patrol_length = 5  # number of spaces during patrols
-                self.hull_hp = 8  # total hull damage before sinking
-                self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 12  # default load of G7a steam torpedoes
-                self.G7e = 10  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 2  # number of aft torpedo tubes
-                self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 5  # current ammo for deck gun
-                self.deck_gun_cap = 5  # sub's deck gun ammo capacity
-                self.reserves_aft = 2  # number of aft torpedo reloads
-                self.systems["3.7 Flak"] = 0  # large (3.7) flak (-1 means not present)
-            case "IXB":
-                self.patrol_length = 6  # number of spaces during patrols
-                self.hull_hp = 8  # total hull damage before sinking
-                self.flooding_hp = 9  # total flooding damage before surfacing
-                self.G7a = 12  # default load of G7a steam torpedoes
-                self.G7e = 10  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 2  # number of aft torpedo tubes
-                self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 5  # current ammo for deck gun
-                self.deck_gun_cap = 5  # sub's deck gun ammo capacity
-                self.reserves_aft = 2  # number of aft torpedo reloads
-                self.systems["3.7 Flak"] = 0  # large (3.7) flak (-1 means not present)
-            case "VIID":
-                self.patrol_length = 5  # number of spaces during patrols
-                self.hull_hp = 8  # total hull damage before sinking
-                self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 8  # default load of G7a steam torpedoes
-                self.G7e = 6  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 1  # number of aft torpedo tubes
-                self.torpedo_type_spread = 3  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10  # current ammo for deck gun
-                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
-                self.reserves_aft = 1  # number of aft torpedo reloads
-                self.systems["3.7 Flak"] = -1  # large (3.7) flak (-1 means not present)
-
-            # TODO VIID, VIIC Flak  (Unsure if VIID is accurate)
-
-        # ---------Ammunition (what's in what torpedo tube) and overall damage indicators
-        self.hull_Damage = 0  # current amount of hull damage
-        self.flooding_Damage = 0  # current amount of flooding
-        self.forward_G7a = 0  # number of loaded G7a torpedoes (fore)
-        self.forward_G7e = 0  # number of loaded G7e torpedoes (fore)
-        self.aft_G7a = 0  # number of loaded G7a torpedoes (aft)
-        self.aft_G7e = 0  # number of loaded G7e torpedoes (aft)
-        self.reloads_forward_G7a = 0  # number of reloads forward of G7a
-        self.reloads_forward_G7e = 0  # number of reloads forward of G7e
-        self.reloads_aft_G7a = 0  # number of reloads aft of G7a
-        self.reloads_aft_G7e = 0  # number of reloads aft of G7e
-
-        # used to roll against to get damage location on sub
-        self.damageChart = ["Batteries", "flooding", "crew injury", "Periscope", "Dive Planes", "Electric Engine #1",
-                            "flooding", "Electric Engine #2", "Diesel Engine #1", "Flak guns", "Diesel Engine #2",
-                            "3.7 Flak",
-                            "flooding", "minor", "hull", "crew injury", "hull", "Deck Gun",
-                            "hull", "Radio", "flooding", "flooding", "hull", "Flak Gun",
-                            "flooding", "hull", "crew injury", "floodingx2", "hull", "Deck Gun",
-                            "Hydrophones", "Aft Torpedo Doors", "crew injuryx2", "Forward Torpedo Doors", "hullx2",
-                            "Fuel Tanks"]
-
-        # --------CREW STATES & TRAINING LEVELS
-        self.crew_level = 1  # 0=green,  1=trained,  2=veteran,  3=elite
-        self.crew1 = 0  # 0=fine,   1=lw        2=sw        4=kia
-        self.crew2 = 0
-        self.crew3 = 0
-        self.crew4 = 0
-        self.WO1_level = 0  # 0=normal,  1=exp
-        self.WO1 = 0
-        self.WO2_level = 0
-        self.WO2 = 0
-        self.eng_level = 0
-        self.eng = 0
-        self.doc_level = 0
-        self.doc = 0
-        self.kmdt = 0
-
-    def getType(self):
-        """Returns string of submarine Type"""
-        return self.subClass
-
-    def getTotalInTubes(self, loc, type=""):
-        """Returns the total number of torpedoes currently loaded in tubes in a given part (forward or aft)"""
-        if loc == "Forward":
-            if type == "":
-                return self.forward_G7a + self.forward_G7e
-            elif type == "G7a":
-                return self.forward_G7a
-            else:
-                return self.forward_G7e
-        elif loc == "Aft":
-            if type == "":
-                return self.aft_G7a + self.aft_G7e
-            elif type == "G7a":
-                return self.aft_G7a
-            else:
-                return self.aft_G7e
-
-    def torpedoResupply(self):
-        """Called for in-port resupply of torpedoes to determine how many of each torpedo is taken, and assigned where"""
-        # TODO Resupply for minelaying missions (remove tubes and replace with mines)
-        print("Submarine Resupply - You are given ", self.G7a, "(steam) and ", self.G7e, "(electric) torpedoes.")
-        print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
-        SA = -1
-        while SA < 0 or SA > self.torpedo_type_spread:
-            print("Current # of steam torpedoes to add. 0 -", self.torpedo_type_spread)
-            SA = int(input())
-        self.G7a = self.G7a + SA
-        self.G7e = self.G7e - SA
-        if SA == 0:  # if player did not add steam and remove electrics
-            SE = -1
-            while SE < 0 or SE > self.torpedo_type_spread:
-                print("Current # of electric torpedoes to add. 0 -", self.torpedo_type_spread)
-                SE = int(input())
-            self.G7a = self.G7a - SE
-            self.G7e = self.G7e + SE
-
-        # ask player how many steam torpedoes to load forward
-        f1 = -1
-        print("Number of forward tubes: ", self.forward_tubes)
-        while (f1 < 0 or f1 > self.forward_tubes) and (f1 + self.getTotalInTubes("Forward")):
-            f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
-        self.forward_G7a = f1
-        self.forward_G7e = self.forward_tubes - f1
-
-        # ask player how many steam torpedoes to load aft
-        f2 = -1
-        print("Number of aft tubes: ", self.aft_tubes)
-        while (f2 < 0 or f2 > self.aft_tubes) and (f2 + self.getTotalInTubes("Aft")):
-            f2 = int(input("Enter # of G7a steam torpedoes to load in the aft torpedo tube(s): "))
-        self.aft_G7a = f2
-        self.aft_G7e = self.aft_tubes - f2
-
-        # ask player how many steam torpedoes for aft reserve(s)
-        if self.reserves_aft > 0 and self.G7a - f1 - f2 > 0:
-            print("Remaining G7a steam topedoes: ", self.G7a - f1 - f2)
-            f3 = -1
-            while f3 < 0 or f3 > self.aft_tubes:
-                f3 = int(input("Enter # of G7a to load into the aft reserves."))
-            self.reloads_aft_G7a = f3
-            self.reloads_aft_G7e = self.reserves_aft - f3
-        elif self.G7a == 0 and self.reserves_aft > 0:  # if there are no steam & aft reserves, fill with electrics
-            self.aft_G7e = self.reserves_aft
-
-        self.reloads_forward_G7a = self.G7a - self.forward_G7a - self.aft_G7a - self.reloads_aft_G7a  # number of reloads forward of G7a
-        self.reloads_forward_G7e = self.G7e - self.forward_G7e - self.aft_G7e - self.reloads_aft_G7e
-
-        self.deck_gun_ammo = self.deck_gun_cap
-
-    def fireTorpedo(self, forwardOrAft, type):
-        """Fires a torpedo from the sub, removing it from the loaded 'tubes'"""
-        match forwardOrAft:
-            case "Forward":
-                if type == "G7a":
-                    self.forward_G7a -= 1
-                else:
-                    self.forward_G7e -= 1
-            case "Aft":
-                if type == "G7a":
-                    self.aft_G7a -= 1
-                else:
-                    self.aft_G7e -= 1
-
-    def subSupplyPrintout(self, specific=""):
-        """Prints current ammunition loads (by default, forward, aft and deck gun ammo. Can pass Forward or Aft
-        to get JUST the loadout of that part of the boat. Prints as LOADED/RELOADS for a specific type."""
-        if specific == "" or specific == "Forward":
-            print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
-                  self.reloads_forward_G7e)
-        if specific == "" or specific == "Aft":
-            print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
-                  self.reloads_aft_G7e)
-        if specific == "" or specific == "Deck Gun":
-            print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
-
-    def reloadForward(self):
-        """Reloads forward tubes (gets input based on which types are available and which to load.)"""
-        self.subSupplyPrintout("Forward")
-
-        # if there are forward steam reloads, otherwise no steam to reload
-        if self.reloads_forward_G7a > 0:
-            invalid = True
-            print("Number of forward tubes: ", self.forward_tubes)
-            while invalid:
-                f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
-                # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
-                if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
-                    continue
-                # check if G7a torpedoes to load is more than currently held on the boat
-                if f1 > self.reloads_forward_G7a:
-                    continue
-                invalid = False
-
-            self.forward_G7a = self.forward_G7a + f1
-            self.reloads_forward_G7a = self.reloads_forward_G7a - f1
-
-        # IF there are still empty tubes AND if there are forward electric reloads, otherwise no electrics to reload
-        if self.getTotalInTubes("Forward") < self.forward_tubes and self.reloads_forward_G7e > 0:
-            self.subSupplyPrintout("Forward")
-            invalid = True
-            while (invalid):
-                f1 = int(input("Enter # of  G7e electric torpedoes to load in the forward tubes: "))
-                # check if G7e torpedoes to load + total currently in tubes is greater than total number of tubes
-                if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
-                    continue
-                # check if G7a torpedoes to load is more than currently held on the boat
-                if f1 > self.reloads_forward_G7e:
-                    continue
-                invalid = False
-
-            self.forward_G7e = self.forward_G7e + f1
-            self.reloads_forward_G7e = self.reloads_forward_G7e - f1
-
-        self.subSupplyPrintout()
-
-    def crewKnockedOut(self):
-        """Returns true if all 4 'regular' crewmen are SW or KIA - state 2 or 3"""
-        if self.crew1 >= 2 and self.crew2 >= 2 and self.crew3 >= 2 and self.crew4 >= 2:
-            return True
-        else:
-            return False
-
-    def diveToTestDepth(self):
-        """Performs the dive to test depth. Giving 1 damage then checking to see if further damage is incurred. Can
-        recrusively call itself if damage continues."""
-        self.hull_Damage = self.hull_Damage + 1
-        crushdamage = d6Rollx2()
-        print("Depth damage roll: ", crushdamage)
-        if crushdamage < self.hull_Damage:
-            print("The hull creaks until... CRUSH")
-            gameover()
-        elif crushdamage == self.hull_Damage:
-            print("The hull strains under the pressure. Taking additional damage...")
-            self.diveToTestDepth()
-        else:
-            print("The U-boat takes the pressure of the depths admirably.")
-
-    def attacked(self, attackDepth, mod, year, airAttack=False):
-        """When rolling against chart E3- when the sub takes damage. By default, escort attack only but can pass
-        True as third value for an air attack. Mod (second param) is 1 when 12+ is rolled on detection."""
-        attackRoll = d6Rollx2()
-        attackMods = 0
-        if self.systems["Fuel Tanks"] >= 1:
-            attackMods += 1
-        if self.systems["Hydrophones"] >= 1:
-            attackMods += 1
-        if self.systems["Batteries"] >= 1:
-            attackMods += 1
-        if self.systems["Electric Engine #1"] >= 1:
-            attackMods += 1
-        if self.systems["Electric Engine #2"] >= 1:
-            attackMods += 1
-        attackMods = attackMods + mod
-        if year >= 1943:
-            attackMods += 1
-        if airAttack:
-            attackMods += 2
-
-        print("Taking damage!")
-        printRollandMods(attackRoll, attackMods)
-
-        match attackRoll + attackMods:
-            case 2 | 3:
-                print("Their depth charges were ineffective!")
-            case 4 | 5 | 6:
-                print("1 hit on the sub!")
-                self.damage(1)
-            case 7 | 8:
-                print("2 hits on the sub!")
-                self.damage(2)
-            case 9 | 10:
-                print("3 hits on the sub!")
-                self.damage(3)
-            case 11:
-                print("4 hits on the sub!")
-                self.damage(4)
-            case 12:
-                print("5 hits on the sub!!")
-                self.damage(5)
-            case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
-                print("Too much damage sir, we're taking on too much water!!")
-                gameover()
-
-    def damage(self, numOfHits):
-        """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
-        for being sunk etc."""
-        tookFloodingThisRound = False
-        for x in range(numOfHits):
-            damage = self.damageChart[random.randint(0, 35)]
-            match damage:
-                case "crew injury":
-                    # todo deal with crew injury
-                    print("Crew Injury")
-                case "crew injuryx2":
-                    # todo deal with crew injury
-                    print("Crew Injury x2!")
-                case "flooding":
-                    print("Flooding!")
-                    self.flooding_Damage += 1
-                    tookFloodingThisRound = True
-                case "floodingx2":
-                    print("Major flooding!")
-                    self.flooding_Damage += 2
-                    tookFloodingThisRound = True
-                case "hull":
-                    print("Hull damage!")
-                    self.hull_Damage += 1
-                case "hullx2":
-                    print("Major hull damage!")
-                    self.hull_Damage += 2
-                case "Flak Guns":
-                    if self.systems["3.7 Flak Gun"] >= 0:
-                        print("Both flak guns have been damaged!")
-                        self.systems.update({"3.7 Flak Gun": 1})
-                    else:
-                        print("Flak gun has been hit!")
-                    self.systems.update({"Flak Gun": 1})
-                case "minor":
-                    print("Damage is minor, nothing to report!")
-                case _:
-                    print("The " + damage + " has taken damage!")
-                    # damageVariation = d6Roll()
-                    # match damageVariation:
-                    #     case 1:
-                    #         print("The" + self.systems[damage].key + "have taken damage!")
-                    #     case 2:
-                    self.systems.update({damage: 1})
-
-        time.sleep(3)
-        # check if flooding took place this round and roll for additional flooding chance
-        if tookFloodingThisRound:
-            addlFlooding = d6Roll()
-            floodingMods = 0
-            if self.eng >= 2:
-                floodingMods += 1
-            elif self.eng_level == 1:
-                floodingMods -= 1
-
-            printRollandMods(addlFlooding, floodingMods)
-
-            if addlFlooding + floodingMods <= 4:
-                print("Leaks have been patched- no more flooding.")
-            else:
-                print("Leaks weren't contained quickly enough! Additional flooding!")
-                self.flooding_Damage = self.flooding_Damage + 1
-
-        # check to see if sunk from hull damage
-        if self.hull_Damage >= self.hull_hp:
-            print("The hull sustains too much damage and the ship breaks apart under the damage, sinking.")
-            gameover()
-        if self.flooding_Damage >= self.flooding_hp:
-            print("The ship takes on too much water, forcing you to blow the ballast tanks and surface.")
-            # todo scuttle
-            gameover()
-
-    def printStatus(self):
-        print("Current damage/HP: ", self.hull_Damage, "/", self.hull_hp)
-        print("Current flooding/HP ", self.flooding_Damage, "/", self.flooding_hp)
-        #check if any damaged systems, then print list
-        damagedTotal = countOf(self.systems.values(), 1)
-        count = 0
-        if damagedTotal > 0:
-            print("Damaged systems: ", end="")
-            for key in self.systems:
-                if self.systems[key] == 1:
-                    if count == damagedTotal - 1:
-                        print(key)
-                    else:
-                        print(key, end=", ")
-                        count += 1
-        # check if any inop systems, then print list
-        inopTotal = countOf(self.systems.values(), 2)
-        count = 0
-        if inopTotal > 0:
-            print("Inoperative systems: ", end="")
-            for key in self.systems:
-                if self.systems[key] == 2:
-                    if count == inopTotal - 1:
-                        print(key)
-                    else:
-                        print(key, end=", ")
-                        count += 1
-
-    def pumps(self):
-        self.flooding_Damage = 0
-
-
-class Ship():
-    """All ships that can be targeted by the player."""
-    type = ""  # small freighter, large freighter, tanker, warship or capital ship
-    hp = 0
-    damage = 0
-    name = ""
-    GRT = 0
-    clss = ""
-    sunk = False
-
-    def __init__(self, type, loc=""):
-        self.type = type
-        self.G7aINCOMING = 0
-        self.G7eINCOMING = 0
-
-        match self.type:
-            case "Small Freighter":
-                self.damage = 0
-                self.hp = 2
-                self.sunk = False
-                self.clss = type
-                with open("Small Freighter.txt", "r") as fp:
-                    lines = fp.readlines()
-                    if loc == "North America":
-                        print("Get NA small freighter from end of list")
-                        # TODO add NA freighters AFTER regular freighters
-                        # TODO get lines[randomint] of 101-120 or whatever
-                    else:
-                        entry = lines[random.randint(1, 25)]  # TODO finish small freighter .txt and increase to 100
-                    entry = entry.split("-")
-                    self.name = entry[0]
-                    self.GRT = int(entry[1])
-
-            case "Large Freighter" | "Tanker":
-                with open(f"{type}.txt", "r") as fp:
-                    lines = fp.readlines()
-                    if loc == "North America":
-                        print("Get NA ship from end of list")
-                        # TODO add NA freighters AFTER regular freighters
-                        # TODO get lines[randomint] of 101-120 or whatever
-                    else:
-                        entry = lines[
-                            random.randint(1, 25)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
-                    entry = entry.split("-")
-                    self.name = entry[0]
-                    self.GRT = int(entry[1])
-                if self.GRT >= 10000:
-                    self.hp = 4
-                else:
-                    self.hp = 3
-                self.clss = type
-                self.damage = 0
-                self.sunk = False
-
-            case "Escort":
-                with open("Escort.txt", "r") as fp:
-                    lines = fp.readlines()
-                    entry = lines[random.randint(1, 669)]
-                    entry = entry.split("#")
-                    self.name = entry[0]
-                    self.clss = entry[1]
-                    self.GRT = int(entry[2])
-                    self.hp = 4  # TODO doublecheck HP on escorts
-                    self.damage = 0
-                    self.sunk = False
-
-            case "Capital Ship":
-                # TODO - add capital ship.txt etc
-                print("TODO")
-
-    def __str__(self):
-        s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"
-        return s
-
-    def fireG7a(self, num):
-        """Adds a steam torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
-        self.G7aINCOMING = self.G7eINCOMING + num
-
-    def fireG7e(self, num):
-        """Adds an electric torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
-        self.G7eINCOMING = self.G7eINCOMING + num
-
-    def hasTorpedoesIncoming(self):
-        """Returns true if it has any incoming torpedoes"""
-        if self.G7aINCOMING > 0 or self.G7eINCOMING > 0:
-            return True
-        else:
-            return False
-
-    def resetG7a(self):
-        """Sets incoming steam torpedoes to zero"""
-        self.G7aINCOMING = 0
-
-    def resetG7e(self):
-        """Sets incoming electric torpedoes to zero"""
-        self.G7eINCOMING = 0
-
-    def removeG7a(self):
-        """Removes 1 steam torpedo from incoming - as in it was resolved."""
-        self.G7aINCOMING = self.G7aINCOMING - 1
-
-    def removeG7e(self):
-        """Removes 1 electric torpedo from incoming - as in it was resolved."""
-        self.G7eINCOMING = self.G7eINCOMING - 1
-
-    def takeDamage(self, dam):
-        """Attributes damage to this ship object and checks if it was sunk."""
-        self.damage = self.damage + dam
-        if self.damage >= self.hp:
-            self.sunk = True
+from ship import *
+from submarine import *
 
 
 def d6Roll():
@@ -607,6 +54,9 @@ class Game():
         self.patrolLength = 0
         self.G7aFired = 0
         self.G7eFired = 0
+        self.firedForward = False
+        self.firedAft = False
+        self.firedDeckGun = False
         self.shipsSunk = []
         self.gameloop()
 
@@ -886,7 +336,7 @@ class Game():
                         print("ERROR getting loc")
                 else:
                     return patrol
-            case 8:
+            case _:
                 if self.onStationSteps == 0:
                     if self.currentLocationStep == self.patrolLength - 1:
                         return "Transit"
@@ -1228,6 +678,8 @@ class Game():
 
     def encounterAttack(self, enc, existingShips = None):
         """When any type of ship/convoy is rolled as an encounter"""
+
+        #if starting an encounter with an existing ship list
         if existingShips is None:
             ship = self.getShips(enc)
         else:
@@ -1265,11 +717,6 @@ class Game():
                 shipsSunk += 1
             if ship[x].damage > 0 and ship[x].sunk == False:
                 shipsDamaged += 1
-
-        #deal with unescorted ships (allow multiple weapons to be fired
-        #TODO Probably consider all weapon firings on unescorted targets in 1 single round
-        if ship[0].type != "Escort":
-            action2 = self.attackRound(enc, ship)
 
         #check if all ships aside from escorts have been sunk (end of combat)
         if ship[0].type == "Escort":
@@ -1317,20 +764,6 @@ class Game():
                     else:
                         print("Roll to see if successfully follow ship(s)")
                         print("Repair, reload and new enc with same ship(s)")
-
-
-
-
-
-        action2 = None
-        if shipsSunk != len(ship) and ship[0] != "Escort":
-            self.sub.subSupplyPrintout()
-            if action == "Forward Torpedo Salvo":
-                action2 = self.getAttackType(ship, depth, timeOfDay, True)
-            elif action == "Aft Torpedo Salvo":
-                action2 = self.getAttackType(ship, depth, timeOfDay, False, True)
-            elif action == "Deck Gun":
-                action2 = self.getAttackType(ship, depth, timeOfDay, False, False, True)
 
         # if shipsSunk != len(ship) and ship[0] != "Escort" and action2 is not None:
         #     self.sub.subSupplyPrintout()
@@ -1468,9 +901,8 @@ class Game():
             else:
                 return True
 
-    def getAttackType(self, ship, depth, timeOfDay, firedForward=False, firedAft=False, firedDeckGun=False):
+    def getAttackType(self, ship, depth, timeOfDay):
         """Gets a valid attack type and returns string of the attack."""
-        notValid = True
         bowSalvoAvail = True
         aftSalvoAvail = True
         secondSalvoAvail = True
@@ -1478,13 +910,13 @@ class Game():
 
         print("How should we attack?")
         #bow
-        if self.sub.systems["Forward Torpedo Doors"] == 0 and (self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and firedForward == False:
+        if self.sub.systems["Forward Torpedo Doors"] == 0 and (self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and self.firedForward == False:
             print("1) Bow Torpedo Salvo")
         else:
             print("1) -UNAVAILABLE- Bow Torpedo Savlo ")
             bowSalvoAvail = False
         #aft
-        if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and firedAft == False:
+        if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and self.firedAft == False:
             print("2) Aft Torpedo Salvo")
         else:
             print("2) -UNAVAILABLE- Aft Torpedo Salvo")
@@ -1496,23 +928,29 @@ class Game():
             print("3) -UNAVAILABLE- Forward & Aft Torpedo Salvo")
             secondSalvoAvail = False
         #deck gun
-        if self.sub.deck_gun_ammo > 0 and depth == "Surfaced" and ship[0] != "Escort" and firedDeckGun == False:
+        if self.sub.deck_gun_ammo > 0 and depth == "Surfaced" and ship[0].type != "Escort" and self.firedDeckGun == False:
             print("4) Engage with Deck Gun")
         else:
             print("4) -UNAVAILABLE- Engage with Deck Gun")
             deckGunAvail = False
 
+        notValid = True
         while notValid:
             action = input()
             if action == "1" and bowSalvoAvail:
-                return "Forward Torpedo Salvo"
-            if action == "2" and aftSalvoAvail:
-                return "Aft Torpedo Salvo"
-            if action == "3" and secondSalvoAvail:
-                return "Bow & Aft Torpedo Salvo"
-            if action == "4" and deckGunAvail:
-                return "Deck Gun"
-            print("We can't do that! Choose a valid attack!")
+                self.torpedoSalvo("Forward", ship)
+                notValid = False
+            elif action == "2" and aftSalvoAvail:
+                self.torpedoSalvo("Aft", ship)
+                notValid = False
+            elif action == "3" and secondSalvoAvail:
+                self.torpedoSalvo("Both", ship)
+                notValid = False
+            elif action == "4" and deckGunAvail:
+                self.deckGunAttack("Forward", ship)
+                notValid = False
+            else:
+                print("We can't do that! Choose a valid attack!")
 
     def torpedoSalvo(self, foreOrAft, ship):
         printTargetShipList(ship)
@@ -1526,7 +964,10 @@ class Game():
         #validation loop to get a target, then # of torps to fire at it, then get next target if torpedoes are available
         while totalToFire < 1 and self.sub.getTotalInTubes(foreOrAft) != 0:
 
-            target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
+            if len(ship) > 1:
+                target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
+            else:
+                target = 1
 
             target = target - 1
             if target < -1 or target > len(ship):
@@ -1541,7 +982,7 @@ class Game():
             if self.sub.getTotalInTubes(foreOrAft, "G7a") > 0:
                 #validation loop
                 G7aFire = -1
-                while G7aFire < 0 or G7aFire > self.sub.getTotalInTubes(foreOrAft, "G7a"):
+                while G7aFire < 0 and G7aFire > self.sub.getTotalInTubes(foreOrAft, "G7a"):
                     G7aFire = int(input("Fire how many G7a torpedoes?"))
                 ship[target].fireG7a(G7aFire)
                 for x in range(G7aFire):
@@ -1559,6 +1000,12 @@ class Game():
                     self.G7eFired += 1
                 totalToFire = totalToFire - G7eFire
 
+            if foreOrAft == "Forward":
+                self.firedForward = True
+            else:
+                self.firedAft = True
+
+            #if both, allow for firing aft as well
             if both:
                 self.sub.subSupplyPrintout("Aft")
                 # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
@@ -1582,6 +1029,7 @@ class Game():
                         self.sub.fireTorpedo("Aft", "G7e")
                         self.G7eFired += 1
                     totalToFire = totalToFire - G7eFire
+                self.firedAft = True
 
     def deckGunAttack(self, ship):
         printTargetShipList(ship)
@@ -1618,9 +1066,9 @@ class Game():
 
         # ask to flip to day or night
         if timeOfDay == "Night":
-            print("Do you wish to attempt to attempt to follow the target and attack during the day?")
+            print("Do you wish to attempt to follow the target and attack during the day?")
         else:
-            print("Do you wish to attempt to attempt to follow the target and attack during the night?")
+            print("Do you wish to attempt to follow the target and attack during the night?")
         if verifyYorN() == "Y":
             fliproll = d6Roll()
             if fliproll >= 5:
@@ -1660,23 +1108,17 @@ class Game():
             case "3" | "Long":
                 r = 6  # hit on 6 or less
 
-        # show and assign weps
-        self.sub.subSupplyPrintout()
-        action = self.getAttackType(ship, depth, timeOfDay)
-
-        match action:
-            case "Forward Torpedo Salvo":
-                self.torpedoSalvo("Forward", ship)
-            case "Aft Torpedo Salvo":
-                self.torpedoSalvo("Aft", ship)
-            case "Forward & Aft Torpedo Salvo":
-                self.torpedoSalvo("Both", ship)
-            case "Deck Gun":
-                self.deckGunAttack(ship)
-
         # resets to zero the number of torpedoes fired for the engagement
         self.G7aFired = 0
         self.G7eFired = 0
+        self.firedForward = False
+        self.firedAft = False
+        self.firedDeckGun = False
+
+        # show and assign weps
+        self.sub.subSupplyPrintout()
+        self.getAttackType(ship, depth, timeOfDay)
+
         # resolve each torpedo by rolling and getting roll mods
         self.resolveTorpedoes(ship, depth, r)
 
@@ -1698,17 +1140,16 @@ class Game():
         if ship[0].type != "Escort" and shipsSunk != len(ship):
             print("Should we make another attack?")
             if verifyYorN() == "Y":
-                match action:
-                    case "Forward Torpedo Salvo":
-                        self.torpedoSalvo("Forward", ship)
-                    case "Aft Torpedo Salvo":
-                        self.torpedoSalvo("Aft", ship)
-                    case "Forward & Aft Torpedo Salvo":
-                        self.torpedoSalvo("Both", ship)
-                    case "Deck Gun":
-                        self.deckGunAttack(ship)
+                self.getAttackType(ship, depth, timeOfDay)
+                self.resolveTorpedoes(ship, depth, r)
 
-        return action
+        #check third (final) time for attack in same round on unescorted targets
+        if ship[0].type != "Escort" and shipsSunk != len(ship):
+            print("Should we make another attack?")
+            if verifyYorN() == "Y":
+                self.getAttackType(ship, depth, timeOfDay)
+                self.resolveTorpedoes(ship, depth, r)
+
 
     def resolveTorpedoes(self, ship, depth, r):
         for s in range(len(ship)):
@@ -1755,7 +1196,7 @@ class Game():
                                     print("Serious damage! (2)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(2)
-                                case 4 | 5 | 6:
+                                case _:
                                     print("Minor damage! (1)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(1)
@@ -1774,7 +1215,7 @@ class Game():
                         if self.wasDud("G7e"):
                             print("Torpedo was a dud!")
                             time.sleep(3)
-                            ship[s].removeG7a()
+                            ship[s].removeG7e()
                         else:
                             damRoll = d6Roll()
                             match damRoll:
@@ -1790,7 +1231,7 @@ class Game():
                                     print("Serious damage! (2)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(2)
-                                case 4 | 5 | 6:
+                                case _:
                                     print("Minor damage! (1)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(1)

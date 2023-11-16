@@ -1,0 +1,115 @@
+import random
+import os
+import time
+from operator import *
+
+class Ship():
+    """All ships that can be targeted by the player."""
+    type = ""  # small freighter, large freighter, tanker, warship or capital ship
+    hp = 0
+    damage = 0
+    name = ""
+    GRT = 0
+    clss = ""
+    sunk = False
+
+    def __init__(self, type, loc=""):
+        self.type = type
+        self.G7aINCOMING = 0
+        self.G7eINCOMING = 0
+
+        match self.type:
+            case "Small Freighter":
+                self.damage = 0
+                self.hp = 2
+                self.sunk = False
+                self.clss = type
+                with open("Small Freighter.txt", "r") as fp:
+                    lines = fp.readlines()
+                    if loc == "North America":
+                        print("Get NA small freighter from end of list")
+                        # TODO add NA freighters AFTER regular freighters
+                        # TODO get lines[randomint] of 101-120 or whatever
+                    else:
+                        entry = lines[random.randint(1, 25)]  # TODO finish small freighter .txt and increase to 100
+                    entry = entry.split("-")
+                    self.name = entry[0]
+                    self.GRT = int(entry[1])
+
+            case "Large Freighter" | "Tanker":
+                with open(f"{type}.txt", "r") as fp:
+                    lines = fp.readlines()
+                    if loc == "North America":
+                        print("Get NA ship from end of list")
+                        # TODO add NA freighters AFTER regular freighters
+                        # TODO get lines[randomint] of 101-120 or whatever
+                    else:
+                        entry = lines[
+                            random.randint(1, 25)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
+                    entry = entry.split("-")
+                    self.name = entry[0]
+                    self.GRT = int(entry[1])
+                if self.GRT >= 10000:
+                    self.hp = 4
+                else:
+                    self.hp = 3
+                self.clss = type
+                self.damage = 0
+                self.sunk = False
+
+            case "Escort":
+                with open("Escort.txt", "r") as fp:
+                    lines = fp.readlines()
+                    entry = lines[random.randint(1, 669)]
+                    entry = entry.split("#")
+                    self.name = entry[0]
+                    self.clss = entry[1]
+                    self.GRT = int(entry[2])
+                    self.hp = 4  # TODO doublecheck HP on escorts
+                    self.damage = 0
+                    self.sunk = False
+
+            case "Capital Ship":
+                # TODO - add capital ship.txt etc
+                print("TODO")
+
+    def __str__(self):
+        s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"
+        return s
+
+    def fireG7a(self, num):
+        """Adds a steam torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
+        self.G7aINCOMING = self.G7eINCOMING + num
+
+    def fireG7e(self, num):
+        """Adds an electric torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
+        self.G7eINCOMING = self.G7eINCOMING + num
+
+    def hasTorpedoesIncoming(self):
+        """Returns true if it has any incoming torpedoes"""
+        if self.G7aINCOMING > 0 or self.G7eINCOMING > 0:
+            return True
+        else:
+            return False
+
+    def resetG7a(self):
+        """Sets incoming steam torpedoes to zero"""
+        self.G7aINCOMING = 0
+
+    def resetG7e(self):
+        """Sets incoming electric torpedoes to zero"""
+        self.G7eINCOMING = 0
+
+    def removeG7a(self):
+        """Removes 1 steam torpedo from incoming - as in it was resolved."""
+        self.G7aINCOMING = self.G7aINCOMING - 1
+
+    def removeG7e(self):
+        """Removes 1 electric torpedo from incoming - as in it was resolved."""
+        self.G7eINCOMING = self.G7eINCOMING - 1
+
+    def takeDamage(self, dam):
+        """Attributes damage to this ship object and checks if it was sunk."""
+        self.damage = self.damage + dam
+        if self.damage >= self.hp:
+            self.sunk = True
