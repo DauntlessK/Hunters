@@ -10,12 +10,11 @@ from submarine import *
 #Deal with patrol aborts
 #high score recording
 #reroll for boats not allowed in med
-#deal with missions 1) BUG mission encounter boxes 2) loading of mines 3) completing missions etc
+#deal with missions 1) BUG mission encounter boxes 2) loading of mines 3) completing mine/abwehr missions
 #successfull vs unsuccessful patrols
-#crew and captain promotions (3 patrols and 1 year)
+#crew and captain promotions (3 patrols and 1 year promotion check)
 #decreased a crew skill level (to green?) for 3 unsuccessful patrols
-#captain medals / awards
-#mods for captain ranks and medals/awards
+#captain medals / awards - checking for awards and giving them
 #port repair and time passage
 #wolfpacks
 #additional round of combat roll
@@ -25,8 +24,6 @@ from submarine import *
 #crew injury rolls
 #add final subs (VIID and VIIC Flak)
 #decreasing crew level for replacement of 3+ crew members (not below trained)
-#KMDT Severe wounds (and other crew
-#extended patrols for IX and VIID (move calendar forward 2 months instead of 1 before repair/refit
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or higher vers
 #capital ship count
 #resupply at sea (rulebook 14.9)
