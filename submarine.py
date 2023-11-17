@@ -234,43 +234,65 @@ class Submarine():
         if specific == "" or specific == "Deck Gun":
             print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
 
-    def reloadForward(self):
+    def reload(self):
         """Reloads forward tubes (gets input based on which types are available and which to load.)"""
-        self.subSupplyPrintout("Forward")
-
-        # if there are forward steam reloads, otherwise no steam to reload
-        if self.reloads_forward_G7a > 0:
-            invalid = True
-            print("Number of forward tubes: ", self.forward_tubes)
-            while invalid:
-                f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
-                # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
-                if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
-                    continue
-                # check if G7a torpedoes to load is more than currently held on the boat
-                if f1 > self.reloads_forward_G7a:
-                    continue
-                invalid = False
-
-            self.forward_G7a = self.forward_G7a + f1
-            self.reloads_forward_G7a = self.reloads_forward_G7a - f1
-
-        # IF there are still empty tubes AND if there are forward electric reloads, otherwise no electrics to reload
-        if self.getTotalInTubes("Forward") < self.forward_tubes and self.reloads_forward_G7e > 0:
+        #check forward tubes needing reload
+        if self.getTotalInTubes("Forward") != self.forward_tubes:
             self.subSupplyPrintout("Forward")
-            invalid = True
-            while (invalid):
-                f1 = int(input("Enter # of  G7e electric torpedoes to load in the forward tubes: "))
-                # check if G7e torpedoes to load + total currently in tubes is greater than total number of tubes
-                if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
-                    continue
-                # check if G7a torpedoes to load is more than currently held on the boat
-                if f1 > self.reloads_forward_G7e:
-                    continue
-                invalid = False
+            # if there are forward steam reloads, otherwise no steam to reload
+            if self.reloads_forward_G7a > 0:
+                invalid = True
+                while invalid:
+                    f1 = int(input("Enter # of  G7a steam torpedoes to load in the forward tubes: "))
+                    # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
+                    if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
+                        continue
+                    # check if G7a torpedoes to load is more than currently held on the boat
+                    if f1 > self.reloads_forward_G7a:
+                        continue
+                    invalid = False
+                self.forward_G7a += f1
+            if self.reloads_forward_G7e > 0 and self.getTotalInTubes("Forward") != self.forward_tubes:
+                invalid = True
+                while invalid:
+                    f1 = int(input("Enter # of  G7e electric torpedoes to load in the forward tubes: "))
+                    # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
+                    if f1 + self.getTotalInTubes("Forward") > self.forward_tubes:
+                        continue
+                    # check if G7a torpedoes to load is more than currently held on the boat
+                    if f1 > self.reloads_forward_G7e:
+                        continue
+                    invalid = False
+                self.forward_G7e += f1
 
-            self.forward_G7e = self.forward_G7e + f1
-            self.reloads_forward_G7e = self.reloads_forward_G7e - f1
+        # check aft tubes needing reload
+        if self.getTotalInTubes("Aft") != self.aft_tubes:
+            self.subSupplyPrintout("Aft")
+            # if there are forward steam reloads, otherwise no steam to reload
+            if self.reloads_aft_G7a > 0:
+                invalid = True
+                while invalid:
+                    f1 = int(input("Enter # of  G7a steam torpedoes to load in the aft tubes: "))
+                    # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
+                    if f1 + self.getTotalInTubes("Aft") > self.aft_tubes:
+                        continue
+                    # check if G7a torpedoes to load is more than currently held on the boat
+                    if f1 > self.reloads_aft_G7a:
+                        continue
+                    invalid = False
+                self.aft_G7a += f1
+            if self.reloads_aft_G7e > 0 and self.getTotalInTubes("Aft") != self.aft_tubes:
+                invalid = True
+                while invalid:
+                    f1 = int(input("Enter # of  G7e electric torpedoes to load in the aft tubes: "))
+                    # check if G7a torpedoes to load + total currently in tubes is greater than total number of tubes
+                    if f1 + self.getTotalInTubes("Aft") > self.aft_tubes:
+                        continue
+                    # check if G7a torpedoes to load is more than currently held on the boat
+                    if f1 > self.reloads_aft_G7e:
+                        continue
+                    invalid = False
+                self.aft_G7e += f1
 
         self.subSupplyPrintout()
 
@@ -444,3 +466,27 @@ class Submarine():
 
     def pumps(self):
         self.flooding_Damage = 0
+
+def printRollandMods(roll, mods):
+    """Prints a roll for some check, plus the modifiers, then the modified roll total."""
+    total = roll + mods
+    if mods <= 0:
+        print("Roll:", roll, "• Modifiers:", mods, "| MODIFIED ROLL:", total)
+    if mods > 0:
+        toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
+        print(toPrint)
+
+def d6Roll():
+    """Rolls 1 die."""
+    roll = random.randint(1, 6)
+    return roll
+
+
+def d6Rollx2():
+    """Rolls 2 dice."""
+    roll = d6Roll() + d6Roll()
+    return roll
+
+def gameover():
+    print("GAMEOVER!")
+    exit()

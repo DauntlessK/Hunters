@@ -706,7 +706,7 @@ class Game():
             # break out of encounter
             return "exit"
 
-        action1 = self.attackRound(enc, ship)
+        self.attackRound(enc, ship)
 
         #allow for more rounds of combat
         #get number of ships sunk and damaged out of entire encounter
@@ -769,7 +769,7 @@ class Game():
         #     self.sub.subSupplyPrintout()
 
         #reload
-        self.sub.reloadForward()
+        self.sub.reload()
         self.G7aFired = 0
         self.G7eFired = 0
 
@@ -901,7 +901,7 @@ class Game():
             else:
                 return True
 
-    def getAttackType(self, ship, depth, timeOfDay):
+    def getAttackType(self, ship, depth, timeOfDay, r):
         """Gets a valid attack type and returns string of the attack."""
         bowSalvoAvail = True
         aftSalvoAvail = True
@@ -938,109 +938,20 @@ class Game():
         while notValid:
             action = input()
             if action == "1" and bowSalvoAvail:
-                self.torpedoSalvo("Forward", ship)
+                self.torpedoSalvo("Forward", ship, depth, r)
                 notValid = False
             elif action == "2" and aftSalvoAvail:
-                self.torpedoSalvo("Aft", ship)
+                self.torpedoSalvo("Aft", ship, depth, r)
                 notValid = False
             elif action == "3" and secondSalvoAvail:
-                self.torpedoSalvo("Both", ship)
+                self.torpedoSalvo("Both", ship, depth, r)
                 notValid = False
             elif action == "4" and deckGunAvail:
-                self.deckGunAttack("Forward", ship)
+                self.deckGunAttack(ship, r)
                 notValid = False
             else:
                 print("We can't do that! Choose a valid attack!")
 
-    def torpedoSalvo(self, foreOrAft, ship):
-        printTargetShipList(ship)
-        both = False
-        if foreOrAft == "Both":
-            foreOrAft = "Forward"
-            both = True
-
-        totalToFire = -1
-
-        #validation loop to get a target, then # of torps to fire at it, then get next target if torpedoes are available
-        while totalToFire < 1 and self.sub.getTotalInTubes(foreOrAft) != 0:
-
-            if len(ship) > 1:
-                target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
-            else:
-                target = 1
-
-            target = target - 1
-            if target < -1 or target > len(ship):
-                continue
-            if target == 0 and ship[0].type == "Escort":  #disallow firing at escort
-                continue
-            if target == -1:
-                break
-
-            self.sub.subSupplyPrintout(foreOrAft)
-            #if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
-            if self.sub.getTotalInTubes(foreOrAft, "G7a") > 0:
-                #validation loop
-                G7aFire = -1
-                while G7aFire < 0 and G7aFire > self.sub.getTotalInTubes(foreOrAft, "G7a"):
-                    G7aFire = int(input("Fire how many G7a torpedoes?"))
-                ship[target].fireG7a(G7aFire)
-                for x in range(G7aFire):
-                    self.sub.fireTorpedo(foreOrAft, "G7a")
-                    self.G7aFired += 1
-                totalToFire = totalToFire - G7aFire
-            if self.sub.getTotalInTubes(foreOrAft, "G7e") > 0:
-                # validation loop
-                G7eFire = -1
-                while G7eFire < 0 or G7eFire > self.sub.getTotalInTubes(foreOrAft, "G7e"):
-                    G7eFire = int(input("Fire how many G7e torpedoes?"))
-                ship[target].fireG7e(G7eFire)
-                for x in range(G7eFire):
-                    self.sub.fireTorpedo(foreOrAft, "G7e")
-                    self.G7eFired += 1
-                totalToFire = totalToFire - G7eFire
-
-            if foreOrAft == "Forward":
-                self.firedForward = True
-            else:
-                self.firedAft = True
-
-            #if both, allow for firing aft as well
-            if both:
-                self.sub.subSupplyPrintout("Aft")
-                # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
-                if self.sub.getTotalInTubes("Aft", "G7a") > 0:
-                    # validation loop
-                    G7aFire = -1
-                    while G7aFire < 0 or G7aFire > self.sub.getTotalInTubes("Aft", "G7a"):
-                        G7aFire = int(input("Fire how many G7a torpedoes?"))
-                    ship[target].fireG7a(G7aFire)
-                    for x in range(G7aFire):
-                        self.sub.fireTorpedo("Aft", "G7a")
-                        self.G7aFired += 1
-                    totalToFire = totalToFire - G7aFire
-                if self.sub.getTotalInTubes("Aft", "G7e") > 0:
-                    # validation loop
-                    G7eFire = -1
-                    while G7eFire < 0 or G7eFire > self.sub.getTotalInTubes("Aft", "G7e"):
-                        G7eFire = int(input("Fire how many G7e torpedoes?"))
-                    ship[target].fireG7e(G7eFire)
-                    for x in range(G7eFire):
-                        self.sub.fireTorpedo("Aft", "G7e")
-                        self.G7eFired += 1
-                    totalToFire = totalToFire - G7eFire
-                self.firedAft = True
-
-    def deckGunAttack(self, ship):
-        printTargetShipList(ship)
-        self.sub.subSupplyPrintout("Deck Gun")
-
-        #get how many shots to fire (1 or 2)
-        notValid = True
-        while notValid:
-            if self.sub.deck_gun_ammo == 1:
-                shots = 1
-            shots = int(input("Number of shots to fire (1 or 2)"))
 
     def attackRound(self, enc, ship, isFollowing = False):
 
@@ -1117,10 +1028,7 @@ class Game():
 
         # show and assign weps
         self.sub.subSupplyPrintout()
-        self.getAttackType(ship, depth, timeOfDay)
-
-        # resolve each torpedo by rolling and getting roll mods
-        self.resolveTorpedoes(ship, depth, r)
+        self.getAttackType(ship, depth, timeOfDay, r)
 
         # post shot escort detection
         if ship[0].type == "Escort":
@@ -1140,16 +1048,100 @@ class Game():
         if ship[0].type != "Escort" and shipsSunk != len(ship):
             print("Should we make another attack?")
             if verifyYorN() == "Y":
-                self.getAttackType(ship, depth, timeOfDay)
-                self.resolveTorpedoes(ship, depth, r)
+                self.getAttackType(ship, depth, timeOfDay, r)
 
         #check third (final) time for attack in same round on unescorted targets
         if ship[0].type != "Escort" and shipsSunk != len(ship):
             print("Should we make another attack?")
             if verifyYorN() == "Y":
-                self.getAttackType(ship, depth, timeOfDay)
-                self.resolveTorpedoes(ship, depth, r)
+                self.getAttackType(ship, depth, timeOfDay, r)
 
+    def getTarget(self, ship):
+        notValid = True
+        while notValid:
+            if len(ship) > 1:
+                target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
+            else:
+                target = 1
+
+            target = target - 1
+            if target < -1 or target > len(ship):
+                continue
+            elif target == 0 and ship[0].type == "Escort":  # disallow firing at escort
+                continue
+            else:
+                break
+        return target
+
+    def torpedoSalvo(self, foreOrAft, ship, depth, r):
+        printTargetShipList(ship)
+        both = False
+        if foreOrAft == "Both":
+            foreOrAft = "Forward"
+            both = True
+
+        totalToFire = -1
+
+        # validation loop to get a target, then # of torps to fire at it, then get next target if torpedoes are available
+        while totalToFire < 1 and self.sub.getTotalInTubes(foreOrAft) != 0:
+
+            target = self.getTarget(ship)
+
+            self.sub.subSupplyPrintout(foreOrAft)
+            # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
+            if self.sub.getTotalInTubes(foreOrAft, "G7a") > 0:
+                # validation loop
+                G7aFire = -1
+                while G7aFire < 0 or G7aFire > self.sub.getTotalInTubes(foreOrAft, "G7a"):
+                    G7aFire = int(input("Fire how many G7a torpedoes?"))
+                ship[target].fireG7a(G7aFire)
+                for x in range(G7aFire):
+                    self.sub.fireTorpedo(foreOrAft, "G7a")
+                    self.G7aFired += 1
+                totalToFire = totalToFire - G7aFire
+            if self.sub.getTotalInTubes(foreOrAft, "G7e") > 0:
+                # validation loop
+                G7eFire = -1
+                while G7eFire < 0 or G7eFire > self.sub.getTotalInTubes(foreOrAft, "G7e"):
+                    G7eFire = int(input("Fire how many G7e torpedoes?"))
+                ship[target].fireG7e(G7eFire)
+                for x in range(G7eFire):
+                    self.sub.fireTorpedo(foreOrAft, "G7e")
+                    self.G7eFired += 1
+                totalToFire = totalToFire - G7eFire
+
+            if foreOrAft == "Forward":
+                self.firedForward = True
+            else:
+                self.firedAft = True
+
+            # if both, allow for firing aft as well
+            if both:
+                self.sub.subSupplyPrintout("Aft")
+                # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
+                if self.sub.getTotalInTubes("Aft", "G7a") > 0:
+                    # validation loop
+                    G7aFire = -1
+                    while G7aFire < 0 or G7aFire > self.sub.getTotalInTubes("Aft", "G7a"):
+                        G7aFire = int(input("Fire how many G7a torpedoes?"))
+                    ship[target].fireG7a(G7aFire)
+                    for x in range(G7aFire):
+                        self.sub.fireTorpedo("Aft", "G7a")
+                        self.G7aFired += 1
+                    totalToFire = totalToFire - G7aFire
+                if self.sub.getTotalInTubes("Aft", "G7e") > 0:
+                    # validation loop
+                    G7eFire = -1
+                    while G7eFire < 0 or G7eFire > self.sub.getTotalInTubes("Aft", "G7e"):
+                        G7eFire = int(input("Fire how many G7e torpedoes?"))
+                    ship[target].fireG7e(G7eFire)
+                    for x in range(G7eFire):
+                        self.sub.fireTorpedo("Aft", "G7e")
+                        self.G7eFired += 1
+                    totalToFire = totalToFire - G7eFire
+                self.firedAft = True
+
+        self.resolveTorpedoes(ship, depth, r)
 
     def resolveTorpedoes(self, ship, depth, r):
         for s in range(len(ship)):
@@ -1206,6 +1198,10 @@ class Game():
                         ship[s].removeG7a()
                         time.sleep(3)
                 if ship[s].G7eINCOMING > 0:
+                    if r == 7:
+                        rollMod += 1
+                    if r == 6:
+                        rollMod += 2
                     print("Roll to hit on", ship[s].name, ": ", end="")
                     printRollandMods(torpRoll, rollMod)
                     self.G7eFired += 1
@@ -1245,6 +1241,56 @@ class Game():
                 print(ship[s].name, "has been sunk!")
                 self.shipsSunk.append(ship[s])
                 time.sleep(3)
+
+    def deckGunAttack(self, ship, r):
+        printTargetShipList(ship)
+        self.sub.subSupplyPrintout("Deck Gun")
+
+        target = self.getTarget(ship)
+
+        #get how many shots to fire (1 or 2)
+        shots = -1
+        while shots < 0 or shots > 2:
+            if self.sub.deck_gun_ammo == 1:
+                shots = 1
+            shots = int(input("Number of shots to fire (1 or 2)"))
+
+        for x in range (shots):
+            gunRoll = d6Rollx2()
+            rollMod = 0
+            # TODO add mod for KC+Oakleaves award
+            if self.sub.crew_level == 0:
+                rollMod += 1
+            if self.sub.crewKnockedOut():
+                rollMod += 1
+            if self.sub.kmdt > 1:
+                if self.sub.WO1 > 1:
+                    rollMod += 2
+                else:
+                    rollMod += 1
+
+            print("Roll to hit on", ship[target].name, ": ", end="")
+            printRollandMods(gunRoll, rollMod)
+            if gunRoll + rollMod <= r:
+                damRoll = d6Roll()
+                mod = 0
+                if "IX" in self.sub.getType():
+                    mod -= 1
+                if damRoll <= 1:
+                    damage = 2
+                else:
+                    damage = 1
+                print("Hit!", ship[target].name, "takes", damage, "damage!")
+                ship[target].takeDamage(damage)
+            else:
+                print("Deck gun missed!")
+            self.sub.deck_gun_ammo -= 1
+
+        self.firedDeckGun = True
+        if ship[target].sunk:
+            print(ship[target].name, "has been sunk!")
+            self.shipsSunk.append(ship[target])
+            time.sleep(3)
 
 
 def verifyYorN():
