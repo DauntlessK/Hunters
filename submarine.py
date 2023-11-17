@@ -120,21 +120,40 @@ class Submarine():
                             "Hydrophones", "Aft Torpedo Doors", "crew injuryx2", "Forward Torpedo Doors", "hullx2",
                             "Fuel Tanks"]
 
-        # --------CREW STATES & TRAINING LEVELS
-        self.crew_level = 1  # 0=green,  1=trained,  2=veteran,  3=elite
-        self.crew1 = 0  # 0=fine,   1=lw        2=sw        4=kia
-        self.crew2 = 0
-        self.crew3 = 0
-        self.crew4 = 0
-        self.WO1_level = 0  # 0=normal,  1=exp
-        self.WO1 = 0
-        self.WO2_level = 0
-        self.WO2 = 0
-        self.eng_level = 0
-        self.eng = 0
-        self.doc_level = 0
-        self.doc = 0
-        self.kmdt = 0
+        # --------CREW TRAINING LEVELS / RANKS
+        #levels for individual crew members are 0=normal, 1=trained/expert
+        #levels for kmdt are 0 = Oberleutnant zur See, 1 = Kapitan-leutnant, 2 = Fregatten-kapitan, 3 = Kapitan zur See
+        #levels for regular crew are 0 = green, 1 = trained, 2 = Veteran, 3 = Elite
+        self.crew_levels = {
+            "Crew": 1,
+            "Watch Officer 1": 0,
+            "Watch Officer 2": 0,
+            "Engineer": 0,
+            "Doctor": 0,
+            "Kommandant": 0
+        }
+        # --------CREW STATES
+        #states are 0 = fine, 1 = LW, 2 = SW, 3 = KIA
+        self.crew_health = {
+            "Crew 1": 0,
+            "Crew 2": 0,
+            "Crew 3": 0,
+            "Crew 4": 0,
+            "Watch Officer 1": 0,
+            "Watch Officer 2": 0,
+            "Engineer": 0,
+            "Doctor": 0,
+            "Kommandant": 0,
+            "Abwehr Agent": 0
+        }
+
+        #Knight's Cross decoration level
+        #  0 = none
+        #  1 = KC =   Knight's Cross (sink 100k GRT or sink 1 capital ship) - no +1 penalty for firing fore and aft salvo
+        #  2 = KCO=   Knight's Cross & Oakleaves (Sink 175k GRT OR sink 1 capital ship after being given KC OR sink 75k GRT after being given GC)
+        #  3 = KCO&S= Knight's Cross Oakleaves & Swords (Sink 250k GRT, OR sink 1 capital ship after being given KCO, or sink 75k GRT after being given GCO)
+        #  4 = KCOS&D=Knight's Cross Oakleaves, Swords and Diamonds (Sink 300k GRT, sink 1 capital ship after being given KCO&S or sink 50k GRT after being given GCO&S
+        self.knightsCross = 0
 
     def getType(self):
         """Returns string of submarine Type"""
@@ -252,6 +271,7 @@ class Submarine():
                         continue
                     invalid = False
                 self.forward_G7a += f1
+                self.reloads_forward_G7a -= f1
             if self.reloads_forward_G7e > 0 and self.getTotalInTubes("Forward") != self.forward_tubes:
                 invalid = True
                 while invalid:
@@ -264,6 +284,7 @@ class Submarine():
                         continue
                     invalid = False
                 self.forward_G7e += f1
+                self.reloads_forward_G7e -= f1
 
         # check aft tubes needing reload
         if self.getTotalInTubes("Aft") != self.aft_tubes:
@@ -281,6 +302,7 @@ class Submarine():
                         continue
                     invalid = False
                 self.aft_G7a += f1
+                self.reloads_aft_G7a -= f1
             if self.reloads_aft_G7e > 0 and self.getTotalInTubes("Aft") != self.aft_tubes:
                 invalid = True
                 while invalid:
@@ -293,12 +315,13 @@ class Submarine():
                         continue
                     invalid = False
                 self.aft_G7e += f1
+                self.reloads_aft_G7e -= f1
 
         self.subSupplyPrintout()
 
     def crewKnockedOut(self):
         """Returns true if all 4 'regular' crewmen are SW or KIA - state 2 or 3"""
-        if self.crew1 >= 2 and self.crew2 >= 2 and self.crew3 >= 2 and self.crew4 >= 2:
+        if self.crew_health["Crew 1"] >= 2 and self.crew_health["Crew 2"] >= 2 and self.crew_health["Crew 3"] >= 2 and self.crew_health["Crew 4"] >= 2:
             return True
         else:
             return False
@@ -402,7 +425,7 @@ class Submarine():
                     print("Damage is minor, nothing to report!")
                 case _:
                     print("The " + damage + " has taken damage!")
-                    # damageVariation = d6Roll()
+                    # TODO damageVariation = d6Roll()
                     # match damageVariation:
                     #     case 1:
                     #         print("The" + self.systems[damage].key + "have taken damage!")
@@ -466,6 +489,86 @@ class Submarine():
 
     def pumps(self):
         self.flooding_Damage = 0
+
+    def repair(self):
+        print("Repairing the boat.")
+        self.pumps()
+        damagedTotal = countOf(self.systems.values(), 1)
+        count = 0
+
+        if damagedTotal > 0:
+            for key in self.systems:
+                if self.systems[key] == 1:
+                    repairRoll = d6Roll()
+                    repairMod = 0
+                    if self.crew_health["Engineer"] <= 1 and self.crew_level["Engineer"] > 0:
+                        repairMod -= 1
+                    elif self.eng >= 2:
+                        repairMod += 1
+                    # determine amount to roll based on system damaged. # is inclusive so 4 is 4 or less.
+                    if "Engine" in key:
+                        toRoll = 4
+                    elif key == "Hydrophones" or key == "Dive Planes" or key == "Radio" or key == "Fuel Tanks":
+                        toRoll = 2
+                    elif "Gun" in key:
+                        toRoll = 2
+                    elif key == "Periscope" or key == "Batteries":
+                        toRoll = 4
+                    elif "Doors" in key:
+                        toRoll = 2
+                    else:
+                        print("Error getting damaged system repair roll.")
+
+                    if repairRoll + repairMod <= toRoll:
+                        print("Successfully repaired", self.systems[key])
+                        self.systems[key] = 0
+                    else:
+                        print("We aren't able to repair", self.systems[key], "at sea.")
+                        self.systems[key] = 2
+
+        self.printStatus()
+
+    def refit(self):
+        print("TODO")
+        #TODO figure out how many months to repair, reset all damage, then return months to advance
+
+    def crewInjury(self):
+        crewInjuryRoll = d6Rollx2()
+        severity = d6Roll()
+        if self.doc <= 1 and self.doc_level > 0:
+            severity -= 1
+        if severity <= 3:
+            sevText = "lightly wounded!"
+            wounds = 1
+        elif severity <= 5:
+            sevText = "severely wounded!"
+            wounds = 2
+        else:
+            sevText = "killed in action!"
+            wounds = 3
+        match crewInjuryRoll:
+            case 2:
+                toprint = "Kmdt has been " + sevText
+                print(toprint)
+                self.kmdt += wounds
+                if self.kmdt == 4:
+                    gameover()
+            case 3:
+                toprint = "1st Officer has been " + sevText
+                print(toprint)
+                self.WO1 += wounds
+            case 4:
+                toprint = "Engineer has been " + sevText
+                print(toprint)
+                self.eng += wounds
+            case 5:
+                toprint = "Doctor has been " + sevText
+                print(toprint)
+                self.doc += wounds
+            case 6 | 7 | 8 | 9:
+                toprint = "Crew member has been" + sevText
+                print(toprint)
+
 
 def printRollandMods(roll, mods):
     """Prints a roll for some check, plus the modifiers, then the modified roll total."""
