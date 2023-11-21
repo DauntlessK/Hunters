@@ -31,18 +31,18 @@ class Submarine():
         # set sub-specific info
         match subClass:
             case "VIIA":
-                self.patrol_length = 3  # number of spaces during patrols
-                self.hull_hp = 7  # total hull damage before sinking
-                self.flooding_hp = 7  # total flooding damage before surfacing
-                self.G7a = 6  # default load of G7a steam torpedoes
-                self.G7e = 5  # default load of G7e electric torpedoes
-                self.forward_tubes = 4  # number of forward torpedo tubes
-                self.aft_tubes = 1  # number of aft torpedo tubes
-                self.torpedo_type_spread = 1  # plus/minus of steam / electric torpedo mix
-                self.deck_gun_ammo = 10  # current ammo for deck gun
-                self.deck_gun_cap = 10  # sub's deck gun ammo capacity
-                self.reserves_aft = 0  # number of aft torpedo roloads
-                self.systems["3.7 Flak"] = -1  # large (3.7) flak (-1 means not present)
+                self.patrol_length = 3                      # number of spaces during patrols
+                self.hull_hp = 7                            # total hull damage before sinking
+                self.flooding_hp = 7                        # total flooding damage before surfacing
+                self.G7a = 6                                # default load of G7a steam torpedoes
+                self.G7e = 5                                # default load of G7e electric torpedoes
+                self.forward_tubes = 4                      # number of forward torpedo tubes
+                self.aft_tubes = 1                          # number of aft torpedo tubes
+                self.torpedo_type_spread = 1                # plus/minus of steam / electric torpedo mix
+                self.deck_gun_ammo = 10                     # current ammo for deck gun
+                self.deck_gun_cap = 10                      # sub's deck gun ammo capacity
+                self.reserves_aft = 0                       # number of aft torpedo roloads
+                self.systems["3.7 Flak"] = -1               # large (3.7) flak (-1 means not present)
             case "VIIB" | "VIIC":
                 self.patrol_length = 4  # number of spaces during patrols
                 self.hull_hp = 8  # total hull damage before sinking
@@ -437,9 +437,9 @@ class Submarine():
         if tookFloodingThisRound:
             addlFlooding = d6Roll()
             floodingMods = 0
-            if self.eng >= 2:
+            if self.crew_health["Engineer"] >= 2:
                 floodingMods += 1
-            elif self.eng_level == 1:
+            elif self.crew_levels["Engineer"] == 1:
                 floodingMods -= 1
 
             printRollandMods(addlFlooding, floodingMods)
@@ -501,7 +501,7 @@ class Submarine():
                 if self.systems[key] == 1:
                     repairRoll = d6Roll()
                     repairMod = 0
-                    if self.crew_health["Engineer"] <= 1 and self.crew_level["Engineer"] > 0:
+                    if self.crew_health["Engineer"] <= 1 and self.crew_levels["Engineer"] > 0:
                         repairMod -= 1
                     elif self.eng >= 2:
                         repairMod += 1
