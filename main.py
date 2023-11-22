@@ -27,6 +27,8 @@ from submarine import *
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or higher vers
 #capital ship count
 #resupply at sea (rulebook 14.9)
+#unique list of orders to select from when selecting patrol
+#did not reload after second attack?
 
 
 def d6Roll():
@@ -61,9 +63,11 @@ class Game():
         self.awardName = ["", "Knight's Cross", "Knight's Cross with Oakleaves", "Knight's Cross with Oakleaves and Swords",
                           "Knight's Cross with Oakleaves, Swords and Diamonds"]
         self.establishFirstRank()
+        self.monthsSinceLastPromotionCheck = 0     #how many months since last promotion roll
+        self.shipsSunkSinceLastPromotionCheck= 0
+        self.knightsCrossSinceLastPromotionCheck = 0
+        self.unsuccessfulPatrolsSinceLastPromotionCheck = 0
         self.sub.subSupplyPrintout()
-        print("---------------")
-        print("Guten Tag,", self.rank[self.rankMod], "- The date is", self.getFullDate())
         self.currentOrders = ""
         self.patrolCount = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth",
                             "tenth",
@@ -98,17 +102,33 @@ class Game():
         toReturn = self.month[self.date_month] + " - " + str(self.date_year)
         return toReturn
 
-    def advanceTime(self, months):
-        """Moves time forward"""
+    def advanceTime(self, months, wasAtSea = True):
+        """Moves time forward - if was at sea is false, it passes the months one at a time to check for promotion"""
 
-        #move forward x months
-        self.date_month += 1
+        if wasAtSea:
+            self.date_month = self.date_month + months
+            self.monthsSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + months
+            if self.monthsSinceLastPromotionCheck >= 12:
+                print("TODO check for promotion")
+                self.monthsSinceLastPromotionCheck = 0
+        else:
+            #move forward x months, one at a time
+            for x in range (months):
+                self.date_month = self.date_month + 1
+                self.monthsSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + 1
+                if self.date.monthsSinceLastPromotionCheck >= 12:
+                    print("TODO check for promotion")
+                    self.monthsSinceLastPromotionCheck = 0
+
         #reset month to be within 0-11
         if self.date_month > 11:
             self.date_month = self.date_month - 12
             self.date_year += 1
         if (self.month[self.date_month] == "July") and self.date_year == 1940:
             self.francePost = True
+
+    def promotionCheck(self):
+        print("TODO")
 
     def establishFirstRank(self):
         """Determines starting rank of player"""
@@ -117,10 +137,25 @@ class Game():
         else:
             roll = d6Roll()
             print("Rolling for starting rank. Roll is: ", roll)
-            if roll >= 3:
-                self.sub.crew_levels["Kommandant"] = 1
-            else:
-                self.sub.crew_levels["Kommandant"] = 0
+            match self.date_year:
+                case 1939:
+                    self.sub.crew_levels["Kommandant"] = 1
+                case 1940:
+                    if roll >= 3:
+                        self.sub.crew_levels["Kommandant"] = 1
+                    else:
+                        self.sub.crew_levels["Kommandant"] = 0
+                case 1941:
+                    if roll >= 4:
+                        self.sub.crew_levels["Kommandant"] = 1
+                    else:
+                        self.sub.crew_levels["Kommandant"] = 0
+                case 1942 | 1943:
+                    if roll >= 6:
+                        self.sub.crew_levels["Kommandant"] = 1
+                    else:
+                        self.sub.crew_levels["Kommandant"] = 0
+
 
     def chooseSub(self):
         """Gets input from player to choose Submarine Type"""
@@ -170,11 +205,17 @@ class Game():
 
     def startPatrol(self):
         """Starts a new patrol, getting new assignment based on rank, date etc."""
+        print("---------------")
+        print("Guten Tag,", self.rank[self.sub.crew_levels["Kommandant"]], "- The date is", self.getFullDate())
+
+        #get next patrol orders
         if self.sub.crew_levels["Kommandant"] > 0:
             print("PATROL ASSIGNMENT: Roll to choose next patrol?")
             if verifyYorN() == "Y":
                 roll = d6Roll()
                 print("Die roll:", roll)
+
+                #check to see if player can select orders
                 if roll <= self.sub.crew_levels["Kommandant"]:
                     print("You may select your patrol.")
                     self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), True)
@@ -182,12 +223,14 @@ class Game():
                     self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
         else:
             self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
+
         print("Patrol Assignment:", self.currentOrders)
         depart = "U-" + str(self.id) + " departs port early before dawn for " + self.rank[
             self.sub.crew_levels["Kommandant"]] + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
         print(depart)
         self.currentLocationStep = 1
         self.patrolLength = self.getPatrolLength(self.currentOrders)
+        time.sleep(3)
 
     def getPatrolLength(self, patrol):
         """Determines full length of a given patrol (number of on station steps + all transit steps"""
@@ -251,7 +294,7 @@ class Game():
         if orders == "West African Coast" or orders == "Caribbean" and (
                 self.subClass == "VIIA" or self.subClass == "VIIB" or self.subClass == "VIIC"):  # VII Cannot patrol west africa
             orders = "Atlantic"
-        if orders == "British Isles" and self.subClass == "VIID":
+        if orders == "British Isles" and self.sub.getType() == "VIID":
             orders = "British Isles (Minelaying)"
 
         # deal with permanent stations
@@ -274,7 +317,7 @@ class Game():
                 playing = False
 
         #TODO game over stuff, high scores etc
-        print("Game Over- GO THROUGH GAME OVER STEPS")
+        gameover()
 
     def patrol(self):
         """Full patrol loop accounting for leaving port, transiting, patrolling and returning"""
@@ -304,7 +347,7 @@ class Game():
     def portReturn(self):
         """Called after patrol to deal with notification, print out sunk ships so far, and then deal with repair and rearm."""
         # TODO messages based on repair (safely returns, returns with minor damage, limps back to port, etc?)
-        returnMessage = "U-" + self.id + " glides back into port, docking with much fanfare."
+        returnMessage = "U-" + self.id + " glides back into port with much fanfare."
         print(returnMessage)
 
         #move forward 2 months per patrol of larger boats, otherwise 1 month
@@ -313,6 +356,10 @@ class Game():
         else:
             self.advanceTime(1)
 
+        #refit and advance time based on damage
+        refitTime = self.sub.refit()
+        self.advanceTime(refitTime)
+
         #TODO determine mission sucessful
         if "Minelaying" in self.currentOrders or "Abwehr" in self.currentOrders:
             print("FIGURE OUT IF THIS WAS SUCCESSFUL")
@@ -320,6 +367,7 @@ class Game():
             if self.sunkOnCurrentPatrol > 0:
                 self.successfulPatrols += 1
         #reset ships sunk
+        self.shipsSunkSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + self.sunkOnCurrentPatrol
         self.sunkOnCurrentPatrol = 0
 
         #determine if crew rank increases
@@ -339,7 +387,15 @@ class Game():
                     self.sub.crew_levels["Crew"] += 1
                     if self.sub.crew_levels["Crew"] > 3:
                         self.sub.crew_levels["Crew"] = 3
+            self.successfulPatrols = 0
 
+        #heal crew
+        self.sub.crewHeal()
+
+        #rearm boat
+        self.sub.torpedoResupply()
+
+        #Report of total ships and tonnage sunk to date
         totalTonnage = 0
         for x in range(len(self.shipsSunk)):
             totalTonnage = totalTonnage + self.shipsSunk[x].GRT
@@ -354,7 +410,9 @@ class Game():
             print(self.awardName[self.sub.knightsCross])
 
         self.patrolNum += 1
-        # TODO: crew increasing rank (3 patrols), captain promotion (1 year), healing, repair and rearm
+        time.sleep(7)
+
+        #TODO captain promotion (1 year), awards check, healing
 
     def getLocation(self, patrol, step):
         """Gets current location box on a patrol to determine encounter type (transit, Atlantic, etc)"""
@@ -391,6 +449,8 @@ class Game():
                     elif self.currentLocationStep == self.patrolLength:
                         if self.permArcPost or self.francePost:
                             return "Bay of Biscay"
+                        else:
+                            return "Transit"
                     elif (patrol == "Mediterranean" or patrol == "Arctic"):
                         return "Transit"
                     else:
@@ -404,6 +464,8 @@ class Game():
                     elif self.currentLocationStep == self.patrolLength:
                         if self.permArcPost or self.francePost:
                             return "Bay of Biscay"
+                        else:
+                            return "Transit"
                     elif (patrol == "Mediterranean" or patrol == "Arctic"):
                         return "Transit"
                     else:
@@ -417,6 +479,8 @@ class Game():
                     elif self.currentLocationStep == self.patrolLength:
                         if self.permArcPost or self.francePost:
                             return "Bay of Biscay"
+                        else:
+                            return "Transit"
                     elif (patrol == "Mediterranean" or patrol == "Arctic"):
                         return "Transit"
                     else:
@@ -704,7 +768,7 @@ class Game():
             case "Additional Round of Combat":
                 # TODO
                 print("TODO")
-        time.sleep(2)
+        time.sleep(3)
 
     def encounterAircraft(self, sub, year, patrolType):
         """When 'Aircraft' is rolled on a given encounter chart"""
@@ -714,7 +778,7 @@ class Game():
 
         if sub.crew_levels["Crew"] == 0:
             drm -= 1
-        elif ub.crew_levels["Crew"] == 3:
+        elif sub.crew_levels["Crew"] == 3:
             drm += 1
         if sub.crewKnockedOut():
             drm -= 1
@@ -993,7 +1057,7 @@ class Game():
         if self.sub.systems["Forward Torpedo Doors"] == 0 and (self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and self.firedForward == False:
             print("1) Bow Torpedo Salvo")
         else:
-            print("1) -UNAVAILABLE- Bow Torpedo Savlo ")
+            print("1) -UNAVAILABLE- Bow Torpedo Salvo ")
             bowSalvoAvail = False
         #aft
         if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and self.firedAft == False:

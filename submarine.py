@@ -179,6 +179,15 @@ class Submarine():
     def torpedoResupply(self):
         """Called for in-port resupply of torpedoes to determine how many of each torpedo is taken, and assigned where"""
         # TODO Resupply for minelaying missions (remove tubes and replace with mines)
+        self.forward_G7a = 0
+        self.forward_G7e = 0
+        self.aft_G7a = 0
+        self.aft_G7e = 0
+        self.reloads_forward_G7a = 0
+        self.reloads_forward_G7e = 0
+        self.reloads_aft_G7a = 0
+        self.reloads_aft_G7e = 0
+
         print("Submarine Resupply - You are given ", self.G7a, "(steam) and ", self.G7e, "(electric) torpedoes.")
         print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
         SA = -1
@@ -395,11 +404,10 @@ class Submarine():
             damage = self.damageChart[random.randint(0, 35)]
             match damage:
                 case "crew injury":
-                    # todo deal with crew injury
-                    print("Crew Injury")
+                    self.crewInjury()
                 case "crew injuryx2":
-                    # todo deal with crew injury
-                    print("Crew Injury x2!")
+                    self.crewInjury()
+                    self.crewInjury()
                 case "flooding":
                     print("Flooding!")
                     self.flooding_Damage += 1
@@ -529,13 +537,46 @@ class Submarine():
         self.printStatus()
 
     def refit(self):
-        print("TODO")
-        #TODO figure out how many months to repair, reset all damage, then return months to advance
+        """In port repair - systems and hull"""
+        refitTime = 1   #default refit time in months
+
+        #determine length of hull repair damage, then repair hull
+        if self.hull_Damage == 0:
+            self.hull_Damage = 0 #skip
+        elif self.hull_Damage <= 3:
+            print("One additional month for hull repairs.")
+            refitTime += 1
+        elif self.hull_Damage <= 6:
+            print("Two additional months for hull repairs.")
+            refitTime += 2
+        else:
+            print("Three additional months for major hull repair.")
+            refitTime += 3
+        self.hull_Damage = 0
+
+        #determine length of systems damage, then repair all systems
+        systemDamagedCount = 0
+        for key in self.systems:
+            if self.systems[key] >= 1:
+                systemDamagedCount += 1
+                self.systems[key] = 0
+        if systemDamagedCount >= 3:
+            print("Additional month of refit for systems repairs.")
+            refitTime += 1
+
+        return refitTime
+
+    def crewHeal(self):
+        #todo
+        print("All crew have been healed")
+        for key in self.crew_health:
+            self.crew_health[key] = 0
 
     def crewInjury(self):
+        #todo probably need to rethink how injuries are stored
         crewInjuryRoll = d6Rollx2()
         severity = d6Roll()
-        if self.doc <= 1 and self.doc_level > 0:
+        if self.crew_health["Doctor"] <= 1 and self.crew_levels["Doctor"] > 0:
             severity -= 1
         if severity <= 3:
             sevText = "lightly wounded!"
@@ -550,23 +591,39 @@ class Submarine():
             case 2:
                 toprint = "Kmdt has been " + sevText
                 print(toprint)
-                self.kmdt += wounds
-                if self.kmdt == 4:
+                self.crew_health["Kommandant"] += wounds
+                if self.crew_health["Kommandant"] == 4:
                     gameover()
             case 3:
                 toprint = "1st Officer has been " + sevText
                 print(toprint)
-                self.WO1 += wounds
+                self.crew_health["Watch Officer 1"] += wounds
             case 4:
                 toprint = "Engineer has been " + sevText
                 print(toprint)
-                self.eng += wounds
+                self.crew_health["Engineer"] += wounds
             case 5:
                 toprint = "Doctor has been " + sevText
                 print(toprint)
-                self.doc += wounds
+                self.crew_health["Doctor"] += wounds
             case 6 | 7 | 8 | 9:
                 toprint = "Crew member has been" + sevText
+                print(toprint)
+                injuryAllocated = False
+                for key in self.crew_health:
+                    if "Crew" in key:
+                        #find an uninjured crew first
+                        if self.crew_health[key] == 0:
+                            self.crew_health[key] += wounds
+                            injuryAllocated = True
+                            break
+                    else:
+                        continue
+                if injuryAllocated == False:
+                    #todo
+                    print("Injurt unallocated!")
+            case 10:
+                toprint = "Second Officer has been " + sevText
                 print(toprint)
 
 
