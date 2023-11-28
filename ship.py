@@ -13,65 +13,79 @@ class Ship():
     clss = ""
     sunk = False
 
-    def __init__(self, type, loc=""):
+    def __init__(self, type, shipsSunk, loc=""):
         self.type = type
         self.G7aINCOMING = 0
         self.G7eINCOMING = 0
 
-        match self.type:
-            case "Small Freighter":
-                self.damage = 0
-                self.hp = 2
-                self.sunk = False
-                self.clss = type
-                with open("Small Freighter.txt", "r") as fp:
-                    lines = fp.readlines()
-                    if loc == "North America":
-                        print("Get NA small freighter from end of list")
-                        # TODO add NA freighters AFTER regular freighters
-                        # TODO get lines[randomint] of 101-120 or whatever
-                    else:
-                        entry = lines[random.randint(1, 25)]  # TODO finish small freighter .txt and increase to 100
-                    entry = entry.split("-")
-                    self.name = entry[0]
-                    self.GRT = int(entry[1])
+        notUniqueShip = True
+        while notUniqueShip:
+            match self.type:
+                case "Small Freighter":
+                    self.damage = 0
+                    self.hp = 2
+                    self.sunk = False
+                    self.clss = type
+                    with open("Small Freighter.txt", "r") as fp:
+                        lines = fp.readlines()
+                        if loc == "North America":
+                            entry = lines[random.randint(101, 120)]
+                        else:
+                            entry = lines[random.randint(1, 100)]
+                        entry = entry.split("-")
+                        self.name = entry[0]
+                        self.GRT = int(entry[1])
 
-            case "Large Freighter" | "Tanker":
-                with open(f"{type}.txt", "r") as fp:
-                    lines = fp.readlines()
-                    if loc == "North America":
-                        print("Get NA ship from end of list")
-                        # TODO add NA freighters AFTER regular freighters
-                        # TODO get lines[randomint] of 101-120 or whatever
+                case "Large Freighter" | "Tanker":
+                    with open(f"{type}.txt", "r") as fp:
+                        lines = fp.readlines()
+                        if loc == "North America":
+                            entry = lines[
+                                random.randint(101, 120)]
+                        else:
+                            entry = lines[
+                                random.randint(1, 100)]
+                        entry = entry.split("-")
+                        self.name = entry[0]
+                        self.GRT = int(entry[1])
+                    if self.GRT >= 10000:
+                        self.hp = 4
                     else:
-                        entry = lines[
-                            random.randint(1, 25)]  # TODO finish large freighter.txt + tanker.txt and increase to 100
-                    entry = entry.split("-")
-                    self.name = entry[0]
-                    self.GRT = int(entry[1])
-                if self.GRT >= 10000:
-                    self.hp = 4
-                else:
-                    self.hp = 3
-                self.clss = type
-                self.damage = 0
-                self.sunk = False
-
-            case "Escort":
-                with open("Escort.txt", "r") as fp:
-                    lines = fp.readlines()
-                    entry = lines[random.randint(1, 669)]
-                    entry = entry.split("#")
-                    self.name = entry[0]
-                    self.clss = entry[1]
-                    self.GRT = int(entry[2])
-                    self.hp = 4  # TODO doublecheck HP on escorts
+                        self.hp = 3
+                    self.clss = type
                     self.damage = 0
                     self.sunk = False
 
-            case "Capital Ship":
-                # TODO - add capital ship.txt etc
-                print("TODO")
+                case "Escort":
+                    with open("Escort.txt", "r") as fp:
+                        lines = fp.readlines()
+                        entry = lines[random.randint(1, 669)]
+                        entry = entry.split("#")
+                        self.name = entry[0]
+                        self.clss = entry[1]
+                        self.GRT = int(entry[2])
+                        self.hp = 4
+                        self.damage = 0
+                        self.sunk = False
+
+                case "Capital Ship":
+                    with open("Capital Ship.txt", "r") as fp:
+                        lines = fp.readlines()
+                        entry = lines[random.randint(1, 10)]
+                        entry = entry.split("#")
+                        self.name = entry[0]
+                        self.clss = entry[1]
+                        self.GRT = int(entry[2])
+                        self.hp = 5
+                        self.damage = 0
+                        self.sunk = False
+
+            #ensure ship is unique
+            for x in range(len(shipsSunk)):
+                if shipsSunk[x].name == self.name:
+                    continue
+                else:
+                    notUniqueShip = False
 
     def __str__(self):
         s = self.name + " (" + self.clss + " [" + str(self.GRT) + " GRT])"

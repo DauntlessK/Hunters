@@ -34,8 +34,8 @@ class Submarine():
                 self.patrol_length = 3                      # number of spaces during patrols
                 self.hull_hp = 7                            # total hull damage before sinking
                 self.flooding_hp = 7                        # total flooding damage before surfacing
-                self.G7a = 6                                # default load of G7a steam torpedoes
-                self.G7e = 5                                # default load of G7e electric torpedoes
+                self.G7aStarting = 6                        # default load of G7a steam torpedoes
+                self.G7eStarting = 5                        # default load of G7e electric torpedoes
                 self.forward_tubes = 4                      # number of forward torpedo tubes
                 self.aft_tubes = 1                          # number of aft torpedo tubes
                 self.torpedo_type_spread = 1                # plus/minus of steam / electric torpedo mix
@@ -47,8 +47,8 @@ class Submarine():
                 self.patrol_length = 4  # number of spaces during patrols
                 self.hull_hp = 8  # total hull damage before sinking
                 self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 8  # default load of G7a steam torpedoes
-                self.G7e = 6  # default load of G7e electric torpedoes
+                self.G7aStarting = 8  # default load of G7a steam torpedoes
+                self.G7eStarting = 6  # default load of G7e electric torpedoes
                 self.forward_tubes = 4  # number of forward torpedo tubes
                 self.aft_tubes = 1  # number of aft torpedo tubes
                 self.torpedo_type_spread = 3  # plus/minus of steam / electric torpedo mix
@@ -60,8 +60,8 @@ class Submarine():
                 self.patrol_length = 5  # number of spaces during patrols
                 self.hull_hp = 8  # total hull damage before sinking
                 self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 12  # default load of G7a steam torpedoes
-                self.G7e = 10  # default load of G7e electric torpedoes
+                self.G7aStarting = 12  # default load of G7a steam torpedoes
+                self.G7eStarting = 10  # default load of G7e electric torpedoes
                 self.forward_tubes = 4  # number of forward torpedo tubes
                 self.aft_tubes = 2  # number of aft torpedo tubes
                 self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
@@ -73,8 +73,8 @@ class Submarine():
                 self.patrol_length = 6  # number of spaces during patrols
                 self.hull_hp = 8  # total hull damage before sinking
                 self.flooding_hp = 9  # total flooding damage before surfacing
-                self.G7a = 12  # default load of G7a steam torpedoes
-                self.G7e = 10  # default load of G7e electric torpedoes
+                self.G7aStarting = 12  # default load of G7a steam torpedoes
+                self.G7eStarting = 10  # default load of G7e electric torpedoes
                 self.forward_tubes = 4  # number of forward torpedo tubes
                 self.aft_tubes = 2  # number of aft torpedo tubes
                 self.torpedo_type_spread = 4  # plus/minus of steam / electric torpedo mix
@@ -86,8 +86,8 @@ class Submarine():
                 self.patrol_length = 5  # number of spaces during patrols
                 self.hull_hp = 8  # total hull damage before sinking
                 self.flooding_hp = 8  # total flooding damage before surfacing
-                self.G7a = 8  # default load of G7a steam torpedoes
-                self.G7e = 6  # default load of G7e electric torpedoes
+                self.G7aStarting = 8  # default load of G7a steam torpedoes
+                self.G7eStarting = 6  # default load of G7e electric torpedoes
                 self.forward_tubes = 4  # number of forward torpedo tubes
                 self.aft_tubes = 1  # number of aft torpedo tubes
                 self.torpedo_type_spread = 3  # plus/minus of steam / electric torpedo mix
@@ -97,6 +97,9 @@ class Submarine():
                 self.systems["3.7 Flak"] = -1  # large (3.7) flak (-1 means not present)
 
             # TODO VIID, VIIC Flak  (Unsure if VIID is accurate)
+
+        self.G7a = 0
+        self.G7e = 0
 
         # ---------Ammunition (what's in what torpedo tube) and overall damage indicators
         self.hull_Damage = 0  # current amount of hull damage
@@ -109,6 +112,8 @@ class Submarine():
         self.reloads_forward_G7e = 0  # number of reloads forward of G7e
         self.reloads_aft_G7a = 0  # number of reloads aft of G7a
         self.reloads_aft_G7e = 0  # number of reloads aft of G7e
+        self.minesLoadedForward = False
+        self.minesLoadedAft = False
 
         # used to roll against to get damage location on sub
         self.damageChart = ["Batteries", "flooding", "crew injury", "Periscope", "Dive Planes", "Electric Engine #1",
@@ -188,21 +193,21 @@ class Submarine():
         self.reloads_aft_G7a = 0
         self.reloads_aft_G7e = 0
 
-        print("Submarine Resupply - You are given ", self.G7a, "(steam) and ", self.G7e, "(electric) torpedoes.")
+        print("Submarine Resupply - You are given ", self.G7aStarting, "(steam) and ", self.G7eStarting, "(electric) torpedoes.")
         print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
         SA = -1
         while SA < 0 or SA > self.torpedo_type_spread:
             print("Current # of steam torpedoes to add. 0 -", self.torpedo_type_spread)
             SA = int(input())
-        self.G7a = self.G7a + SA
-        self.G7e = self.G7e - SA
+        self.G7a = self.G7aStarting + SA
+        self.G7e = self.G7eStarting - SA
         if SA == 0:  # if player did not add steam and remove electrics
             SE = -1
             while SE < 0 or SE > self.torpedo_type_spread:
                 print("Current # of electric torpedoes to add. 0 -", self.torpedo_type_spread)
                 SE = int(input())
-            self.G7a = self.G7a - SE
-            self.G7e = self.G7e + SE
+            self.G7a = self.G7aStarting - SE
+            self.G7e = self.G7eStarting + SE
 
         # ask player how many steam torpedoes to load forward
         f1 = -1
@@ -254,18 +259,26 @@ class Submarine():
         """Prints current ammunition loads (by default, forward, aft and deck gun ammo. Can pass Forward or Aft
         to get JUST the loadout of that part of the boat. Prints as LOADED/RELOADS for a specific type."""
         if specific == "" or specific == "Forward":
-            print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
-                  self.reloads_forward_G7e)
+            if self.minesLoadedForward:
+                print("Forward- G7a:", "MINES", "/", self.reloads_forward_G7a, "G7e:", "MINES", "/",
+                      self.reloads_forward_G7e)
+            else:
+                print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
+                      self.reloads_forward_G7e)
+
         if specific == "" or specific == "Aft":
-            print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
-                  self.reloads_aft_G7e)
+            if self.minesLoadedAft:
+                print("Aft- G7a:", "MINES", "/", self.reloads_aft_G7a, "G7e:", "MINES", "/", self.reloads_aft_G7e)
+            else:
+                print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
+                      self.reloads_aft_G7e)
         if specific == "" or specific == "Deck Gun":
             print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
 
     def reload(self):
         """Reloads forward tubes (gets input based on which types are available and which to load.)"""
         #check forward tubes needing reload
-        if self.getTotalInTubes("Forward") != self.forward_tubes:
+        if self.getTotalInTubes("Forward") != self.forward_tubes and not self.minesLoadedForward:
             self.subSupplyPrintout("Forward")
             # if there are forward steam reloads, otherwise no steam to reload
             if self.reloads_forward_G7a > 0:
@@ -296,7 +309,7 @@ class Submarine():
                 self.reloads_forward_G7e -= f1
 
         # check aft tubes needing reload
-        if self.getTotalInTubes("Aft") != self.aft_tubes:
+        if self.getTotalInTubes("Aft") != self.aft_tubes and not self.minesLoadedAft:
             self.subSupplyPrintout("Aft")
             # if there are forward steam reloads, otherwise no steam to reload
             if self.reloads_aft_G7a > 0:
@@ -499,10 +512,13 @@ class Submarine():
         self.flooding_Damage = 0
 
     def repair(self):
-        print("Repairing the boat.")
-        self.pumps()
+
         damagedTotal = countOf(self.systems.values(), 1)
         count = 0
+        if self.flooding_Damage > 0 or damagedTotal > 0:
+            print("Repairing the boat.")
+
+        self.pumps()
 
         if damagedTotal > 0:
             for key in self.systems:
@@ -511,7 +527,7 @@ class Submarine():
                     repairMod = 0
                     if self.crew_health["Engineer"] <= 1 and self.crew_levels["Engineer"] > 0:
                         repairMod -= 1
-                    elif self.eng >= 2:
+                    elif self.crew_levels["Engineer"] >= 2:
                         repairMod += 1
                     # determine amount to roll based on system damaged. # is inclusive so 4 is 4 or less.
                     if "Engine" in key:
@@ -528,16 +544,16 @@ class Submarine():
                         print("Error getting damaged system repair roll.")
 
                     if repairRoll + repairMod <= toRoll:
-                        print("Successfully repaired", self.systems[key])
+                        print("Successfully repaired", key)
                         self.systems[key] = 0
                     else:
-                        print("We aren't able to repair", self.systems[key], "at sea.")
+                        print("We aren't able to repair", key, "at sea.")
                         self.systems[key] = 2
 
         self.printStatus()
 
     def refit(self):
-        """In port repair - systems and hull"""
+        """In port repair - systems and hull as well as healing crew and replacing any as necessary"""
         refitTime = 1   #default refit time in months
 
         #determine length of hull repair damage, then repair hull
@@ -564,13 +580,38 @@ class Submarine():
             print("Additional month of refit for systems repairs.")
             refitTime += 1
 
+        self.crewHeal(refitTime)
+
         return refitTime
 
-    def crewHeal(self):
-        #todo
-        print("All crew have been healed")
+    def crewHeal(self, refitTime):
+        """Goes through all crew members that are SW and KIA and replaces them as needed, otherwise heals the crew"""
+        #TODO deal with long term injuries to KMDT
+        crewReplacedCount = 0
         for key in self.crew_health:
+            #check for seriously wounded members first and determine if they need to be replaced or will heal in time for next patrol
+            if self.crew_health[key] == 2:
+                monthsToHeal = d6Roll()
+                if self.crew_levels["Doctor"] == 1 and self.crew_health["Doctor"] <= 1:
+                    monthsToHeal -= 1
+                if monthsToHeal > refitTime:
+                    print(key, "is too injured to join us on our next patrol. He will be replaced.")
+                    if "Crew" in key:
+                        crewReplacedCount += 1
+                    self.crew_levels[key] = 0
+                else:
+                    print(key, "has healed and is ready to join us on our next patrol.")
+            #check if KIA, and replace him
+            elif self.crew_health[key] == 4:
+                print(key, "was killed in action the previous patrol. Another trained crew member has filled in.")
+                self.crew_levels[key] = 0
+
             self.crew_health[key] = 0
+
+        if crewReplacedCount >= 3:
+            self.crew_levels["Crew"] -= 1
+            if self.crew_levels["Crew"] < 1:
+                self.crew_levels = 1
 
     def crewInjury(self):
         #todo probably need to rethink how injuries are stored
@@ -607,7 +648,7 @@ class Submarine():
                 print(toprint)
                 self.crew_health["Doctor"] += wounds
             case 6 | 7 | 8 | 9:
-                toprint = "Crew member has been" + sevText
+                toprint = "Crew member has been " + sevText
                 print(toprint)
                 injuryAllocated = False
                 for key in self.crew_health:
@@ -621,7 +662,7 @@ class Submarine():
                         continue
                 if injuryAllocated == False:
                     #todo
-                    print("Injurt unallocated!")
+                    print("Injury unallocated!")
             case 10:
                 toprint = "Second Officer has been " + sevText
                 print(toprint)

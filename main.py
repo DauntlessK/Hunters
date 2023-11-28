@@ -11,23 +11,20 @@ from submarine import *
 #high score recording
 #reroll for boats not allowed in med
 #deal with missions 1) BUG mission encounter boxes 2) loading of mines 3) completing mine/abwehr missions
-#successfull vs unsuccessful patrols
 #captain medals / awards - checking for awards and giving them
-#port repair and time passage
 #wolfpacks
-#additional round of combat roll
+#additional round of combat roll  ---I THINK THIS IS DONE?
 #random events
 #arctic times
 #scuttle roll
 #crew injury rolls
 #add final subs (VIID and VIIC Flak)
-#decreasing crew level for replacement of 3+ crew members (not below trained)
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or higher vers
 #capital ship count
 #resupply at sea (rulebook 14.9)
-#unique list of orders to select from when selecting patrol
 #did not reload after second attack?
 #hydrophones damage?
+#medic sw or kia rolls for crew members hurt each patrol movement
 
 
 def d6Roll():
@@ -110,17 +107,13 @@ class Game():
         if wasAtSea:
             self.date_month = self.date_month + months
             self.monthsSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + months
-            if self.monthsSinceLastPromotionCheck >= 12:
-                print("TODO check for promotion")
-                self.monthsSinceLastPromotionCheck = 0
+            self.promotionCheck()
         else:
             #move forward x months, one at a time
             for x in range (months):
                 self.date_month = self.date_month + 1
                 self.monthsSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + 1
-                if self.date.monthsSinceLastPromotionCheck >= 12:
-                    print("TODO check for promotion")
-                    self.monthsSinceLastPromotionCheck = 0
+                self.promotionCheck()
 
         #reset month to be within 0-11
         if self.date_month > 11:
@@ -130,12 +123,34 @@ class Game():
             self.francePost = True
 
     def promotionCheck(self):
-        print("TODO")
+        # check if up for promotion
+        if self.monthsSinceLastPromotionCheck >= 12:
+            promotionRoll = d6Roll()
+            promoMods = 0
+            if self.knightsCrossSinceLastPromotionCheck >= 1:
+                promoMods -= 1
+            promoMods -= self.shipsSunkSinceLastPromotionCheck // 10
+            promoMods += self.unsuccessfulPatrolsSinceLastPromotionCheck
+
+            print("You're up for a possible promotion.")
+            printRollandMods(promotionRoll, promoMods)
+
+            if promotionRoll + promoMods <= 4:
+                self.sub.crew_levels["Kommandant"] += 1
+                print("You've been promoted! Congratulations," + self.rank[self.sub.crew_levels["Kommandant"]])
+            else:
+                print("You have been passed over this time around for a promotion. Sorry, ",
+                      + self.rank[self.sub.crew_levels["Kommandant"]])
+
+            # reset counts from last promotion check
+            self.shipsSunkSinceLastPromotionCheck = 0
+            self.unsuccessfulPatrolsSinceLastPromotionCheck = 0
+            self.knightsCrossSinceLastPromotionCheck = 0
 
     def establishFirstRank(self):
         """Determines starting rank of player"""
         if self.sub.getType() == "IXA" or self.sub.getType() == "IXB":
-            self.rankMod = 1
+            self.sub.crew_levels["Kommandant"] = 1
         else:
             roll = d6Roll()
             print("Rolling for starting rank. Roll is: ", roll)
@@ -226,6 +241,7 @@ class Game():
             self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
 
         print("Patrol Assignment:", self.currentOrders)
+        time.sleep(2)
         depart = "U-" + str(self.id) + " departs port early before dawn for " + self.rank[
             self.sub.crew_levels["Kommandant"]] + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
         print(depart)
@@ -266,11 +282,27 @@ class Game():
         with open(patrolChart, "r") as fp:
             lines = fp.readlines()
             if pickingPatrol:
-                print(lines)
-                inp = input("Pick your orders (Case-sensitive): ")
+                #get unique list of orders, then print them and ask for input
+                uniqueOrders = []
+                for x in lines:
+                    x = x.rstrip('\r\n')
+                    if x not in uniqueOrders:
+                        uniqueOrders.append(x)
+                for x in range(len(uniqueOrders)):
+                    if x == len(uniqueOrders):
+                        print(uniqueOrders[x])
+                    else:
+                        print(uniqueOrders[x], end=", ")
+
+                inp = "None"
+                while inp not in uniqueOrders:
+                    inp = input("Pick your orders (Case-sensitive): ")
                 orders = inp
             else:
                 orders = lines[roll - 2]
+
+        # strip any stray returns that may have gotten into the orders string
+        orders = orders.strip('\n')
 
         orders = self.validatePatrol(orders)
 
@@ -282,27 +314,31 @@ class Game():
         else:
             self.onStationSteps = self.sub.patrol_length
 
-        # strip any stray returns that may have gotten into the orders string
-        orders = orders.strip('\n')
-
         self.currentOrders = orders
 
     def validatePatrol(self, orders):
         """Deal with changes in orders based on U-Boat type"""
-        # noinspection PyUnresolvedReferences
-        if orders == "Mediterranean" or orders == "Artic" and (self.subClass == "IXA" or self.subClass == "IXB"):
+        if orders == "Mediterranean" or orders == "Artic" and ("IX" in self.sub.getType()): #IX cannot patrol Artic or Med
             orders = "West African Coast"
-        if orders == "West African Coast" or orders == "Caribbean" and (
-                self.subClass == "VIIA" or self.subClass == "VIIB" or self.subClass == "VIIC"):  # VII Cannot patrol west africa
+        if (orders == "West African Coast" or orders == "Caribbean") and ("VII" in self.sub.getType()):  # VII Cannot patrol west africa
             orders = "Atlantic"
         if orders == "British Isles" and self.sub.getType() == "VIID":
             orders = "British Isles (Minelaying)"
 
         # deal with permanent stations
         if self.permMedPost:
-            orders == "Mediterranean"
+            orders = "Mediterranean"
         if self.permArcPost:
-            orders == "Arctic"
+            orders = "Arctic"
+
+        #change loadout of boat by adding mines
+        if "Minelaying" in orders:
+            self.sub.forward_G7a = 0
+            self.sub.forward_G7e = 0
+            self.sub.aft_G7a = 0
+            self.sub.aft_G7e = 0
+            self.sub.minesLoadedForward = True
+            self.sub.minesLoadedAft = True
 
         return orders
         ##TODO: deal with VIID and VIIC Flak boats not being allowed in med (reroll req)
@@ -348,6 +384,7 @@ class Game():
     def portReturn(self):
         """Called after patrol to deal with notification, print out sunk ships so far, and then deal with repair and rearm."""
         # TODO messages based on repair (safely returns, returns with minor damage, limps back to port, etc?)
+        print("====================================================")
         returnMessage = "U-" + self.id + " glides back into port with much fanfare."
         print(returnMessage)
 
@@ -361,18 +398,15 @@ class Game():
         refitTime = self.sub.refit()
         self.advanceTime(refitTime)
 
-        #TODO determine mission sucessful
-        if "Minelaying" in self.currentOrders or "Abwehr" in self.currentOrders:
-            print("FIGURE OUT IF THIS WAS SUCCESSFUL")
+        #TODO determine mission sucessful ABWEHR
+        if self.sunkOnCurrentPatrol > 0:
+            print("Well done. We've had another successful patrol.")
+            self.successfulPatrols += 1
+            self.unsuccessfulPatrolsInARow = 0
+            self.lastPatrolWasUnsuccessful = False
         else:
-            if self.sunkOnCurrentPatrol > 0:
-                print("Well done. We've had another successful patrol.")
-                self.successfulPatrols += 1
-                self.unsuccessfulPatrolsInARow = 0
-                self.lastPatrolWasUnsuccessful = False
-            else:
-                self.unsuccessfulPatrols += 1
-                self.lastPatrolWasUnsuccessful = True
+            self.unsuccessfulPatrols += 1
+            self.lastPatrolWasUnsuccessful = True
         #reset ships sunk
         self.shipsSunkSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + self.sunkOnCurrentPatrol
         self.sunkOnCurrentPatrol = 0
@@ -396,12 +430,6 @@ class Game():
                         self.sub.crew_levels["Crew"] = 3
             self.successfulPatrols = 0
 
-        #heal crew
-        self.sub.crewHeal()
-
-        #rearm boat
-        self.sub.torpedoResupply()
-
         #Report of total ships and tonnage sunk to date
         #determine if 3 unsuccessful patrols were made in a row
         if self.lastPatrolWasUnsuccessful:
@@ -417,21 +445,31 @@ class Game():
         totalTonnage = f"{totalTonnage:,}"
         print("You've sunk", totalTonnage, "tons.")
         for x in range(len(self.shipsSunk)):
-            if x != len(self.shipsSunk):
+            if x+1 != len(self.shipsSunk):
                 print(self.shipsSunk[x], end=", ")
             else:
                 print(self.shipsSunk[x])
         if self.sub.knightsCross > 0:
+            print("Awards: ", end="")
             print(self.awardName[self.sub.knightsCross])
 
         self.patrolNum += 1
         time.sleep(7)
 
-        #TODO captain promotion (1 year), awards check, healing
+        #rearm boat
+        self.sub.torpedoResupply()
+
+
+
+        #TODO captain promotion (1 year), awards check
 
     def getLocation(self, patrol, step):
         """Gets current location box on a patrol to determine encounter type (transit, Atlantic, etc)"""
         # TODO wolfpacks?
+        #if minelaying patrol is beyond mission square, change orders to just regular british isles
+        if self.onStationSteps < self.sub.patrol_length and "Minelaying" in self.currentOrders:
+            patrol = "British Isles"
+
         match step:
             case 1:
                 if patrol == "Norway" or patrol == "Arctic":
@@ -449,7 +487,10 @@ class Game():
                 if patrol == "North America" or patrol == "Caribbean":
                     return "Transit"
                 else:
-                    return patrol
+                    if "Minelaying" in self.currentOrders:
+                        return "Mission"
+                    else:
+                        return patrol
             case 4:
                 if patrol == "North America" or patrol == "Caribbean":
                     return "Transit"
@@ -466,7 +507,7 @@ class Game():
                             return "Bay of Biscay"
                         else:
                             return "Transit"
-                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                    elif patrol == "Mediterranean" or patrol == "Arctic":
                         return "Transit"
                     else:
                         print("ERROR getting loc")
@@ -481,7 +522,7 @@ class Game():
                             return "Bay of Biscay"
                         else:
                             return "Transit"
-                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                    elif patrol == "Mediterranean" or patrol == "Arctic":
                         return "Transit"
                     else:
                         print("ERROR getting loc")
@@ -496,7 +537,7 @@ class Game():
                             return "Bay of Biscay"
                         else:
                             return "Transit"
-                    elif (patrol == "Mediterranean" or patrol == "Arctic"):
+                    elif patrol == "Mediterranean" or patrol == "Arctic":
                         return "Transit"
                     else:
                         print("ERROR getting loc")
@@ -512,9 +553,9 @@ class Game():
             return "Random Event"
 
         # determine if this is a mission box to roll against mission
-        if (
-                loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+        if (loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
             loc = "Mission"
+        #elif loc == "British Isles (Minelaying)" and self.currentLocationStep WORK OUT IF AT PATROL LOC TO CHANGE TO BRITISH ISLES
         if loc == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
             loc = "Mission"
 
@@ -662,16 +703,14 @@ class Game():
             case "Additional Round of Combat" | "Gibraltar Passage":
                 if year == 1942:
                     roll = roll - 1
-                    print("-1 for 1942")
                 elif year == 1943:
                     roll = roll - 2
-                    print("-2 for 1943")
                 if loc == "Gibraltar Passage":
                     roll = roll - 2
-                    print("-2 for Gibraltar")
                 match roll:
                     case -2, -1, 0, 1, 2, 3:
-                        return "Escort"
+                        print("Enemy escort has arrived!")
+                        self.escortDetection("", 7, "Submerged", "Day", True, 0, 0)
                     case 4 | 5:
                         # aircraft
                         self.encounterAircraft(self.sub, self.getYear(), self.currentOrders)
@@ -681,17 +720,33 @@ class Game():
             case "Bay of Biscay" | "Mission":
                 if year == 1942 and loc == "Bay of Biscay":
                     roll = roll - 1
-                    print("-1 for 1942")
                 elif year == 1943 and loc == "Bay of Biscay":
                     roll = roll - 2
-                    print("-2 for 1943")
+                if loc == "Mission":
+                    roll -= 1
                 match roll:
-                    case 0 | 1 | 2 | 3 | 4:
+                    case -2 | -1 | 0 | 1 | 2 | 3 | 4:
                         # aircraft
                         self.encounterAircraft(self.sub, self.getYear(), self.currentOrders)
                     case _:
                         # no encounter
                         self.encounterNone(loc)
+                #check to see if minelaying was success
+                if loc == "Mission" and "Minelaying" in self.currentOrders:
+                    self.sub.minesLoadedForward = False
+                    self.sub.minesLoadedAft = False
+                    if self.sub.systems["Forward Torpedo Doors"] >= 1:
+                        print("Unable to deploy forward mines.")
+                        self.sub.minesLoadedForward = True
+                    elif self.sub.systems["Aft Torpedo Doors"] >= 1:
+                        print("Unable to deploy aft mines.")
+                        self.sub.minesLoadedAft = True
+                    else:
+                        print("Successfully deployed mines. Mission complete. Continuing patrol.")
+                        self.sunkOnCurrentPatrol += 1
+                    self.sub.reload()
+
+
 
     ##----------------------------------------------- PATROL BOXES (TO DETERMINE WHICH ENCOUNTER TO ROLL)
 
@@ -729,8 +784,12 @@ class Game():
             case "Bay of Biscay":
                 print("You cross the Bay of Biscay without issues.")
             case "Mission":
-                # TODO ?
-                print("Mission")
+                if "Minelaying" in self.currentOrders:
+                    print("Approaching designated mine area.")
+                elif "Abwehr" in self.currentOrders:
+                    print("Approaching the shore to land our agent.")
+                else:
+                    print("Error getting mission")
             case "Arctic" | "Norway":
                 match randResult:
                     case 0:
@@ -788,6 +847,7 @@ class Game():
     def encounterAircraft(self, sub, year, patrolType):
         """When 'Aircraft' is rolled on a given encounter chart"""
         print("ALARM! Aircraft in sight! Rolling to crash dive!")
+        time.sleep(2)
         roll = d6Rollx2()
         drm = 0
 
@@ -808,24 +868,52 @@ class Game():
                 drm -= 1
             case 1943:
                 drm -= 2
-        if (
-                patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
+        if (patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
             drm -= 1
         if patrolType == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
             drm -= 1
 
-        total = roll + drm
+        print("Roll for crash dive!")
+        a1AircraftEncounterRoll = roll + drm
         printRollandMods(roll, drm)
 
-        if total <= 1:
-            print("The aircraft caught us by surprise! 2 Attacks!")
-            self.sub.attacked("Surfaced", 0, self.getYear(), True)
-            self.sub.attacked("Surfaced", 0, self.getYear(), True)
-        elif total <= 5:
-            print("We didn't dive quick enough! 1 attack!")
-            self.sub.attacked("Surfaced", 0, self.getYear(), True)
+        aircraft = "Undamaged"
+        if a1AircraftEncounterRoll <= 5:
+            print("The aircraft caught us by surprise!")
+            time.sleep(3)
+            #sub fires first
+            if self.sub.systems["Flak Gun"] == 0:
+                flakRoll = d6Roll()
+                flakMods = 0
+                if self.sub.getType() == "VIIA":
+                    flakMods += 1
+                if self.sub.systems["3.7 Flak"] == 0:
+                    flakMods -= 1
+                if self.sub.crew_levels["Crew"] >= 2:
+                    flakMods -= 1
+                if self.sub.getType() == "VIIC Flak":
+                    flakMods -= 2
+                if flakRoll + flakMods <= 3:
+                    print("We shot down aircraft!")
+                    self.sub.crewInjury()
+                    self.sub.attacked("Surfaced", 0, self.getYear(), True)
+                    aircraft = "Destroyed"
+                else:
+                    print("We've managed to damage the aircraft!")
+                    self.sub.crewInjury()
+                    self.sub.attacked("Surfaced", 0, self.getYear(), True)
+                    if a1AircraftEncounterRoll <= 1:
+                        self.sub.attacked("Surfaced", 0, self.getYear(), True)
+                    if flakRoll + flakMods <= 5:
+                        aircraft = "Damaged"
         else:
             print("Successful crash dive!")
+
+        if aircraft == "Damaged" or aircraft == "Undamaged":
+            self.getEncounter("Additional Round of Combat", self.getYear(), self.randomEvent)
+
+        if a1AircraftEncounterRoll <= 5:
+            self.sub.repair()
 
         time.sleep(2)
 
@@ -854,6 +942,10 @@ class Game():
             print(strng)
         time.sleep(2)
 
+        #remove ability to attack escorted targets if carrying mines
+        if (self.sub.minesLoadedForward or self.sub.minesLoadedAft) and ship[0].type == "Escort":
+            return "exit"
+
         print("Do you wish to attack?")
         if verifyYorN() == "N":
             # break out of encounter
@@ -871,10 +963,12 @@ class Game():
             if ship[x].damage > 0 and ship[x].sunk == False:
                 shipsDamaged += 1
 
+        self.sub.repair()
+        self.sub.reload()
+        self.G7aFired = 0
+        self.G7eFired = 0
         #check if all ships aside from escorts have been sunk (end of combat)
         if (shipsSunk == len(ship) - 1 and ship[0].type == "Escort") or shipsSunk == len(ship):
-            self.sub.repair()
-            self.sub.reload()
             if enc == "Convoy":
                 print("Attempt to follow convoy?")
                 if verifyYorN() == "Y":
@@ -885,70 +979,111 @@ class Game():
                         print("We lost contact with the convoy!")
             else:
                 print("We sunk all targets!")
-        else:
+        else:   #for when any target ships (not escorts) are still afloat
             #decide whether to follow or not
             print("Follow target(s) to make another attack?")
             if verifyYorN() == "Y":
                 #deal with convoys
                 if enc == "Convoy":
                     if shipsDamaged > 0:
-                        print("Follow damaged ship(s) or the convoy?")
-                        print("1) Damaged ship(s)")
-                        print("2) Convoy")
-                        inp = ""
-                        while inp != "1" or inp != "2":
-                            inp = input()
-                            match inp:
-                                case "1":
-                                    self.sub.repair()
-                                    self.sub.reload()
-                                    #determine if escorted
-                                    escortedRoll = d6Roll()
-                                    if escortedRoll <= 4:
-                                        ship[0].damage = 1
-                                    #remove undamaged ships
-                                    for s in ship:
-                                        if s.damage == 0:
-                                            ship.remove(s)
-                                    ship[0].damage = 0
-                                    self.encounterAttack("Convoy", ship)
-                                case "2":
-                                    self.sub.repair()
-                                    self.sub.reload()
-                                    followRoll = d6Roll()
-                                    if followRoll <= 4 or self.sub.knightsCross == 4:
-                                        self.encounterAttack("Convoy")
-                                    else:
-                                        print("We lost contact with the convoy!")
-                elif enc == "Two Ships + Escort":
-                    if shipsDamaged > 0:
-                        print("Decide whether to follow undamaged ship(s) or damaged ship(s)")
-                        print("Follow damaged ship(s) or the rest?")
-                        print("1) Damaged ship(s)")
-                        print("2) Undamaged ship(s)")
-                        inp = ""
-                        while inp != "1" or inp != "2":
-                            inp = input()
-                            match inp:
-                                case "1":
-                                    self.sub.repair()
-                                    self.sub.reload()
-                                    print("Automatic follow of damaged ships, remove undamaged ships. Roll for escorts")
-                                case "2":
-                                    self.sub.repair()
-                                    self.sub.reload()
-                                    print("Roll to see if successfully follow same ship(s) - new enc same ships pass")
+                        inpInvalid = True
+                        while inpInvalid:
+                            followPrompt = input("Follow damaged ship(s) or the convoy?\n1) Damaged Ships\n2) Convoy")
+                            if followPrompt == "1" or followPrompt == "2":
+                                inpInvalid = False
                     else:
-                        self.sub.repair()
-                        self.sub.reload()
-                        print("Roll to see if successfully follow ship(s)")
+                        followPrompt = "2"
 
-        # if shipsSunk != len(ship) and ship[0] != "Escort" and action2 is not None:
-        #     self.sub.subSupplyPrintout()
+                    match followPrompt:
+                        #Following damaged ships - remove undamaged ships, automatic follow, see if it was escorted
+                        case "1":
+                            self.followFlow(ship)
+                        #following convoy, roll to follow etc
+                        case "2":
+                            followRoll = d6Roll()
+                            if followRoll <= 4 or self.sub.knightsCross == 4:
+                                self.encounterAttack("Convoy")
+                            else:
+                                print("We lost contact with the convoy!")
+                elif enc == "Capital Ship":
+                    if ship[1].damage > 0:
+                        self.encounterAttack("Capital Ship", ship)
+                    else:
+                        print("Unable to follow the", ship[1].name)
+                else:
+                    if shipsDamaged > 0:
+                        inpInvalid = True
+                        while inpInvalid:
+                            followPrompt = input("Follow damaged ship(s) or the rest?\n1) Damaged Ship(s)\n2) Undamaged Ship(s)")
+                            if followPrompt == "1" or followPrompt == "2":
+                                inpInvalid = False
+                        #automatic follow- roll to see whether an escort shows up
+                        if shipsDamaged > 1:
+                            self.followFlow(ship)
+                    else:
+                        if ship[0].type == "Escort":
+                            followRoll = d6Roll()
+                            if followRoll <= 4 or self.sub.knightsCross == 4:
+                                self.encounterAttack(enc, ship)
+                            else:
+                                print("Unable to follow the contact!")
+                        else:   #this else catches all unescorted encounters
+                            #first check on Addl round of combat chart to see if an escort shows up
+                            if self.getEncounter("Additional Round of Combat", self.getYear(), self.randomEvent) == "Escort":
+                                newShip = []
+                                newShip.append(Ship("Escort"))
+                                newShip.append(ship[0])
+                                if ship[1] is not None:
+                                    newShip.append(ship[1])
+                                self.escortDetection(enc, 7, "Submerged", "Day", False, self.G7aFired, self.G7eFired)
+                                self.encounterAttack("Ship + Escort", newShip)
+                            else:
+                                print("Closing to attack again!")
+                                self.encounterAttack(enc, ship)
 
         time.sleep(3)
-        self.G7aFired = 0
-        self.G7eFired = 0
+
+    def followFlow(self, ship):
+        """Prompts and displays for following damaged ship(s) --- ONLY damaged ships, aka automatic follow"""
+        # determine if escorted
+        escortedRoll = d6Roll()
+        if escortedRoll <= 4:
+            ship[0].damage = 1
+        # remove undamaged ships by adding to new ship list then subbing it
+        newShip = []
+        for s in range(len(ship)):
+            if ship[s].damage > 0 and (ship[s].damage < ship[s].hp):
+                newShip.append(ship[s])
+        ship = newShip
+        if escortedRoll <= 4:
+            ship[0].damage = 0
+        # determine type of encounter and start it
+        if ship[0].type != "Escort" and (len(ship) == 1):  # 1 ship only
+            self.encounterAttack("Ship", ship)
+        elif ship[0].type == "Escort" and (len(ship) == 2):  # 1 ship and escort
+            self.encounterAttack("Ship + Escort", ship)
+        elif len(ship) > 2:  # otherwise more than 1 ship damaged
+            print("Select ship to follow:")
+            for x in range(len(ship)):
+                if ship[x].type == "Escort":
+                    continue
+                toPrint = (str(x) + ") " + str(ship[x]))
+                print(toPrint)
+            invalid = True
+            while invalid:
+                b = int(input())
+                if b <= 0 or b > len(ship):
+                    continue
+                else:
+                    invalid = False
+            newShip2 = []
+            if ship[0].type == "Escort":
+                newShip2.append(ship[0])
+            newShip2.append(ship[b])
+            if ship[0].type == "Escort":
+                self.encounterAttack("Ship + Escort", newShip2)
+            else:
+                self.encounterAttack("Ship", newShip2)
 
     def getShips(self, enc):
         """Creates and returns a list of ship object(s) for a given encounter."""
@@ -957,20 +1092,20 @@ class Game():
             tgt.append(Ship("Escort"))
 
         if enc == "Tanker":
-            tgt.append(Ship("Tanker"))
+            tgt.append(Ship("Tanker", self.shipsSunk))
 
         if enc == "Capital Ship":
-            tgt.append(Ship("Capital Ship"))
+            tgt.append(Ship("Capital Ship", self.shipsSunk))
 
         if enc == "Ship" or enc == "Two Ships" or enc == "Convoy" or enc == "Ship + Escort" or enc == "Two Ships + Escort":
-            tgt.append(Ship(self.getTargetShipType()))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
 
         if "Two Ships" in enc or enc == "Convoy":
-            tgt.append(Ship(self.getTargetShipType()))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
 
         if enc == "Convoy":
-            tgt.append(Ship(self.getTargetShipType()))
-            tgt.append(Ship(self.getTargetShipType()))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
 
         return tgt
 
@@ -993,7 +1128,7 @@ class Game():
 
         # deal with close range detection before anything has been fired first, then deal with normal detection
         if range == 8 and firedG7a == 0 and firedG7e == 0 and previouslyDetected == False:
-
+            escortMods -= 2
             if self.getYear() >= 1941 and range == 8:
                 escortMods = escortMods + (self.getYear() - 1940)
             if self.sub.knightsCross >= 3:
@@ -1043,12 +1178,12 @@ class Game():
         if escortRoll == 2:
             "Our ship completely avoided detection!"
             time.sleep(3)
-            return "SnakeEyes"
+            return "Escaped"
         if escortRoll + escortMods <= 8:
             print("We've evaded detection!")
             self.sub.printStatus()
             time.sleep(2)
-            return "escaped"
+            return "Escaped"
         elif escortRoll + escortMods <= 11:
             print("Detected!")
             self.sub.attacked(attackDepth, 0, self.getYear())
@@ -1089,13 +1224,14 @@ class Game():
 
         print("How should we attack?")
         #bow
-        if self.sub.systems["Forward Torpedo Doors"] == 0 and (self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and self.firedForward == False:
+        if self.sub.systems["Forward Torpedo Doors"] == 0 and (
+                self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and self.firedForward == False and self.sub.minesLoadedForward == False:
             print("1) Bow Torpedo Salvo")
         else:
             print("1) -UNAVAILABLE- Bow Torpedo Salvo ")
             bowSalvoAvail = False
         #aft
-        if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and self.firedAft == False:
+        if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and self.firedAft == False and self.sub.minesLoadedAft == False:
             print("2) Aft Torpedo Salvo")
         else:
             print("2) -UNAVAILABLE- Aft Torpedo Salvo")
@@ -1133,7 +1269,7 @@ class Game():
 
 
     def attackRound(self, enc, ship, isFollowing = False):
-
+        """An attack round that consists of firing all AVAILABLE weapons a max of 1 time (on unescorted ships)"""
         if isFollowing:
             print("Attack during day or night?")
             print("1) Day")
@@ -1156,12 +1292,12 @@ class Game():
 
         # ask to flip to day or night
         if timeOfDay == "Night":
-            print("Do you wish to attempt to follow the target and attack during the day?")
+            print("Do you wish to continue the attack at night?")
         else:
-            print("Do you wish to attempt to follow the target and attack during the night?")
+            print("Do you wish to continue the attack during the day?")
         if self.sub.systems["Periscope"] >= 1:
             print("Reminder, Captain, that our periscope is knocked out and we cannot attack submerged.")
-        if verifyYorN() == "Y":
+        if verifyYorN() == "N":
             fliproll = d6Roll()
             if fliproll >= 5:
                 print("We lost them! Roll:", fliproll)
@@ -1196,12 +1332,33 @@ class Game():
             r = input("Choose Range:\n1) -WARNING ESCORT- Close\n2) Medium Range\n3) Long Range")
         else:
             r = input("Choose Range:\n1) Close\n2) Medium Range\n3) Long Range")
+        detectedOnClose = False
         match r:
             case "1" | "Close":
                 r = 8  # must hit on 8 or less
                 if ship[0].type == "Escort":
-                    print("Approaching the targets... hopefully we are not spotted.")
-                    self.escortDetection(enc, r, "Submerged", timeOfDay, False, 0, 0)
+                    print("Approaching the targets... hopefully we are not detected.")
+                    detectionRoll = d6Rollx2()
+                    detectionMods = 0
+
+                    if self.getYear() >= 1941:
+                        detectionMods = detectionMods + (self.getYear() - 1940)
+                    if self.sub.knightsCross >= 3:
+                        detectionMods -= 1
+
+                    printRollandMods(detectionRoll, detectionMods)
+                    if detectionRoll + detectionMods >= 12:
+                        print("Detected! Big Problems!")
+                        self.sub.attacked("Submerged", 1, self.getYear())
+                        time.sleep(3)
+                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0)
+                        detectedOnClose = True
+                    elif detectionRoll + detectionMods >= 10:
+                        print("They've detected us before we could attack!")
+                        self.sub.attacked("Submerged", 0, self.getYear())
+                        time.sleep(3)
+                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0)
+                        detectedOnClose = True
             case "2" | "Medium":
                 r = 7  # hit on 7 or less
             case "3" | "Long":
@@ -1215,8 +1372,9 @@ class Game():
         self.firedDeckGun = False
 
         # show and assign weps
-        self.sub.subSupplyPrintout()
-        self.getAttackType(ship, depth, timeOfDay, r)
+        if not detectedOnClose:
+            self.sub.subSupplyPrintout()
+            self.getAttackType(ship, depth, timeOfDay, r)
 
         # post shot escort detection
         if ship[0].type == "Escort":
@@ -1257,23 +1415,21 @@ class Game():
 
 
     def getTarget(self, ship):
+        """Validates input on ships to target. Only accepts a # from 0-# of ships, disallows firing at escorts. A 0 would
+        indicate finished firing."""
         notValid = True
         while notValid:
             if len(ship) == 2 and ship[0].type == "Escort":  #assume target is only valid target
-                target = 1
-            elif len(ship) > 1:
+                target = 2
+            if len(ship) > 1:
                 target = int(input("Enter ship # from above to target. Enter 0 if done attacking."))
             else:
                 target = 1   # only 1 target, so just choose that ship only
             #TODO work out whether the target was already fired at so we don't ask player again to fire at it
 
-            target = target - 1
-
-            if target == -1:
-                return 0
-            elif target < -2 or target > len(ship):
+            if target < 0 or target > len(ship):  #if out of bounds (less than 0 and greater than # ships
                 continue
-            elif target == 0 and ship[0].type == "Escort":  # disallow firing at escort
+            elif target == 1 and ship[0].type == "Escort":  # disallow firing at escort
                 continue
             else:
                 break
@@ -1286,11 +1442,13 @@ class Game():
             foreOrAft = "Forward"
             both = True
 
-        target = -1
+        notFiredAtAllShips = True
         # validation loop to get a target, then # of torps to fire at it, then get next target if torpedoes are available
-        while self.sub.getTotalInTubes(foreOrAft) != 0 and target != 0:
-
+        while self.sub.getTotalInTubes(foreOrAft) != 0 and notFiredAtAllShips:
             target = self.getTarget(ship)
+            if target == 0:
+                break
+            target = target - 1
 
             self.sub.subSupplyPrintout(foreOrAft)
             # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
@@ -1342,6 +1500,17 @@ class Game():
                         self.sub.fireTorpedo("Aft", "G7e")
                         self.G7eFired += 1
                 self.firedAft = True
+
+            shipsFiredAtCount = 0
+            for x in range (len(ship)):
+                if ship[x].type == "Escort":
+                    shipsFiredAtCount +=1
+                else:
+                    if ship[x].G7aINCOMING > 0 or ship[x].G7eINCOMING > 0:
+                        shipsFiredAtCount += 1
+            if shipsFiredAtCount == len(ship):
+                notFiredAtAllShips = False
+
 
         self.resolveTorpedoes(ship, depth, r)
 
@@ -1452,6 +1621,8 @@ class Game():
 
         target = self.getTarget(ship)
 
+        target = target - 1
+
         #get how many shots to fire (1 or 2)
         shots = -1
         while shots < 0 or shots > 2:
@@ -1530,7 +1701,7 @@ def printRollandMods(roll, mods):
 
 def gameover():
     print("GAMEOVER!")
-    exit()
+    raise SystemExit
 
 
 Game()
