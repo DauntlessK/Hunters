@@ -5,17 +5,17 @@ import time
 from operator import *
 from ship import *
 from submarine import *
+from util import *
 
 #TODO:
 #Deal with patrol aborts
 #high score recording
+#better end of game causes for high score reporting (reason for sinking,enemy, weapon etc)
 #reroll for boats not allowed in med
-#deal with missions 1) BUG mission encounter boxes 2) loading of mines 3) completing mine/abwehr missions
-#captain medals / awards - checking for awards and giving them
+#deal with abwehr missions
+#captain Knight's Cross checks and awards - checking for awards and giving them
 #wolfpacks
-#additional round of combat roll  ---I THINK THIS IS DONE?
 #random events
-#arctic times
 #scuttle roll
 #crew injury rolls
 #add final subs (VIID and VIIC Flak)
@@ -25,20 +25,12 @@ from submarine import *
 #did not reload after second attack?
 #hydrophones damage?
 #medic sw or kia rolls for crew members hurt each patrol movement
+#forward and aft salvo targeting different targets
+#test dive depth on subsequent rounds for a surface-attack
 
 
-def d6Roll():
-    """Rolls 1 die."""
-    roll = random.randint(1, 6)
-    return roll
 
-
-def d6Rollx2():
-    """Rolls 2 dice."""
-    roll = d6Roll() + d6Roll()
-    return roll
-
-
+# noinspection PyStatementEffect
 class Game():
 
     def __init__(self):
@@ -63,13 +55,15 @@ class Game():
         self.shipsSunkSinceLastPromotionCheck= 0
         self.knightsCrossSinceLastPromotionCheck = 0
         self.unsuccessfulPatrolsSinceLastPromotionCheck = 0
+        self.capitalShipsSunkSinceLastKnightsCross = 0
+        self.monthOfLastKnightsCrossAward = -1
+        self.yearOfLastKnightsCrossAward = -1
         self.sub.subSupplyPrintout()
         self.currentOrders = ""
         self.patrolCount = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth",
-                            "tenth",
-                            "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth",
-                            "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third",
-                            "twenty-fourth"]
+                            "tenth", "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth",
+                            "seventeenth", "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second",
+                            "twenty-third", "twenty-fourth"]
         self.patrolNum = 1
         self.sunkOnCurrentPatrol = 0
         self.successfulPatrols = 0
@@ -439,6 +433,8 @@ class Game():
                 if self.sub.crew_levels["Crew"] < 0:
                     self.sub.crew_levels["Crew"] = 0
 
+        self.knightsCrossCheck()
+
         totalTonnage = 0
         for x in range(len(self.shipsSunk)):
             totalTonnage = totalTonnage + self.shipsSunk[x].GRT
@@ -459,9 +455,67 @@ class Game():
         #rearm boat
         self.sub.torpedoResupply()
 
+    def knightsCrossCheck(self):
+        """Checks if the conditions for the NEXT knight's cross award is applicable, and awards it"""
+
+        #get total GRT Sunk
+        totalTonnageSunk = 0
+        for x in range (len(self.shipsSunk)):
+            totalTonnageSunk += self.shipsSunk[x].GRT
+        #get GRT of ships sunk since last knight's cross award
+        if self.sub.knightsCross > 0:
+            GRTSunkSinceLastKnightsCross = 0
+            for x in range (len(self.shipsSunk)):
+                if self.shipsSunk[x].yearSunk > self.yearOfLastKnightsCrossAward:
+                    GRTSunkSinceLastKnightsCross += self.shipsSunk[x].GRT
+                elif self.shipsSunk[x].yearSunk == self.yearOfLastKnightsCrossAward and self.shipsSunk[x].monthSunk >= self.monthOfLastKnightsCrossAward:
+                    GRTSunkSinceLastKnightsCross += self.shipsSunk[x].GRT
 
 
-        #TODO captain promotion (1 year), awards check
+        #if KMDT has no knights cross awards, check for awarding of Knight's Cross
+        #(100k tons, or sunk capital ship)
+        if self.sub.knightsCross == 0:
+            if totalTonnageSunk > 100000 or self.capitalShipsSunkSinceLastKnightsCross > 0:
+                print("You've been awarded the Knight's Cross! Congratulations,",
+                      self.rank[self.sub.crew_levels["Kommandant"]], self.KMDT)
+                self.sub.knightsCross = 1
+                self.capitalShipsSunkSinceLastKnightsCross = 0
+                self.monthOfLastKnightsCrossAward = self.getMonth()
+                self.yearOfLastKnightsCrossAward = self.getYear()
+                #TODO IF AWARDED ANY KC, CAN REQUEST REASSIGNMENT
+        #if KMDT has Knight's Cross, check for awarding of for Knight's Cross Oakleaves KCO
+        #(175k tons, or sunk capital ship / 75k tons since last promo)
+        elif self.sub.knightsCross == 1:
+            if totalTonnageSunk > 175000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 75000:
+                print("You've been awarded the Knight's Cross! Congratulations,",
+                      self.rank[self.sub.crew_levels["Kommandant"]], self.KMDT)
+                self.sub.knightsCross = 2
+                self.capitalShipsSunkSinceLastKnightsCross = 0
+                self.monthOfLastKnightsCrossAward = self.getMonth()
+                self.yearOfLastKnightsCrossAward = self.getYear()
+        # if KMDT has Knight's Cross Oakleaves, check for awarding of for Knight's Cross Oakleaves and Swords KCO&S
+        # (250k tons, or sunk capital ship / 75k tons since last promo)
+        elif self.sub.knightsCross == 2:
+            if totalTonnageSunk > 200000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 75000:
+                print("You've been awarded the Knight's Cross! Congratulations,",
+                      self.rank[self.sub.crew_levels["Kommandant"]], self.KMDT)
+                self.sub.knightsCross = 3
+                self.capitalShipsSunkSinceLastKnightsCross = 0
+                self.monthOfLastKnightsCrossAward = self.getMonth()
+                self.yearOfLastKnightsCrossAward = self.getYear()
+        # if KMDT has Knight's Cross Oakleaves and Swords, check for awarding of for Knight's Cross Oakleaves, Swords, and Diamonds KCOS&D
+        # (300k tons, or sunk capital ship / 50k tons since last promo)
+        elif self.sub.knightsCross == 3:
+            if totalTonnageSunk > 300000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 50000:
+                print("You've been awarded the Knight's Cross! Congratulations,",
+                      self.rank[self.sub.crew_levels["Kommandant"]], self.KMDT)
+                self.sub.knightsCross = 4
+                self.capitalShipsSunkSinceLastKnightsCross = 0
+                self.monthOfLastKnightsCrossAward = self.getMonth()
+                self.yearOfLastKnightsCrossAward = self.getYear()
+
+
+    #--------------------------------------------- Patrol checks and encounter checks
 
     def getLocation(self, patrol, step):
         """Gets current location box on a patrol to determine encounter type (transit, Atlantic, etc)"""
@@ -548,7 +602,9 @@ class Game():
         """Determines which location encounter chart to use, then rolls against and returns the string encounter name"""
         roll = d6Rollx2()
         print("Roll for location:", loc, "-", roll)
-        if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":  # First check if random event (natural 12)
+
+        # First check if random event (natural 12)
+        if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":
             print("Random Event! TODO")
             return "Random Event"
 
@@ -840,7 +896,7 @@ class Game():
                             "A timely storm pushes several patrolling ships off station, allowing you to run straight "
                             "through Gibraltar.")
             case "Additional Round of Combat":
-                # TODO
+                # TODO - needed?
                 print("TODO")
         time.sleep(3)
 
@@ -909,7 +965,8 @@ class Game():
         else:
             print("Successful crash dive!")
 
-        if aircraft == "Damaged" or aircraft == "Undamaged":
+        #roll for another possible encounter if crash dive was not successful and aircraft was not shot down
+        if aircraft == "Damaged" or aircraft == "Undamaged" and a1AircraftEncounterRoll <= 5:
             self.getEncounter("Additional Round of Combat", self.getYear(), self.randomEvent)
 
         if a1AircraftEncounterRoll <= 5:
@@ -1053,6 +1110,7 @@ class Game():
         newShip = []
         for s in range(len(ship)):
             if ship[s].damage > 0 and (ship[s].damage < ship[s].hp):
+                print("Adding ship to follow: ", str(ship[s]))  #DEBUG
                 newShip.append(ship[s])
         ship = newShip
         if escortedRoll <= 4:
@@ -1062,7 +1120,7 @@ class Game():
             self.encounterAttack("Ship", ship)
         elif ship[0].type == "Escort" and (len(ship) == 2):  # 1 ship and escort
             self.encounterAttack("Ship + Escort", ship)
-        elif len(ship) > 2:  # otherwise more than 1 ship damaged
+        elif len(ship) > 1:  # otherwise more than 1 ship damaged
             print("Select ship to follow:")
             for x in range(len(ship)):
                 if ship[x].type == "Escort":
@@ -1084,28 +1142,30 @@ class Game():
                 self.encounterAttack("Ship + Escort", newShip2)
             else:
                 self.encounterAttack("Ship", newShip2)
+        else:
+            print("Error following damaged ship(s)")
 
     def getShips(self, enc):
         """Creates and returns a list of ship object(s) for a given encounter."""
         tgt = []
         if enc == "Convoy" or enc == "Capital Ship" or "Escort" in enc:
-            tgt.append(Ship("Escort"))
+            tgt.append(Ship("Escort", self.shipsSunk, self.getMonth(), self.getYear()))
 
         if enc == "Tanker":
-            tgt.append(Ship("Tanker", self.shipsSunk))
+            tgt.append(Ship("Tanker", self.shipsSunk, self.getMonth(), self.getYear()))
 
         if enc == "Capital Ship":
-            tgt.append(Ship("Capital Ship", self.shipsSunk))
+            tgt.append(Ship("Capital Ship", self.shipsSunk, self.getMonth(), self.getYear()))
 
         if enc == "Ship" or enc == "Two Ships" or enc == "Convoy" or enc == "Ship + Escort" or enc == "Two Ships + Escort":
-            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk, self.getMonth(), self.getYear()))
 
         if "Two Ships" in enc or enc == "Convoy":
-            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk, self.getMonth(), self.getYear()))
 
         if enc == "Convoy":
-            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
-            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk, self.getMonth(), self.getYear()))
+            tgt.append(Ship(self.getTargetShipType(), self.shipsSunk, self.getMonth(), self.getYear()))
 
         return tgt
 
@@ -1215,6 +1275,54 @@ class Game():
             else:
                 return True
 
+    def getTimeOfDay(self, isFollowing):
+        """Returns string of time of day (Day or Night) based on current orders and die roll"""
+        #first deal with actic always day or always night months if applicable
+        if self.currentOrders == "Arctic" and (self.date_month == 5 or self.date_month == 11):
+            if self.date_month == 5:
+                return "Day"
+            elif self.date_month == 11:
+                return "Night"
+            else:
+                print("Error with arctic day night")
+        #otherwise, if following, choose day or night to attack
+        elif isFollowing:
+            print("Attack during day or night?")
+            print("1) Day")
+            print("2) Night")
+            choice = input()
+            match choice:
+                case "1" | "Day" | "day":
+                    return "Day"
+                case "2" | "Night" | "night":
+                    return "Night"
+        #otherwise randomly determine day or night
+        else:
+            timeRoll = d6Roll()
+            #deal with arctic times
+            if self.currentOrders == "Artic":
+                match self.date_month:
+                    case 0 | 1 | 2 | 9 | 10:
+                        if timeRoll <= 2:
+                            return "Day"
+                        else:
+                            return "Night"
+                    case 3 | 4 | 6 | 7 | 8:
+                        if timeRoll <= 4:
+                            return "Day"
+                        else:
+                            return "Night"
+                    case 5:
+                        return "Day"
+                    case 11:
+                        return "Night"
+            #non-arctic day/night 50/50 roll
+            else:
+                if timeRoll <= 3:
+                    return "Day"
+                else:
+                    return "Night"
+
     def getAttackType(self, ship, depth, timeOfDay, r):
         """Gets a valid attack type and returns string of the attack."""
         bowSalvoAvail = True
@@ -1270,23 +1378,7 @@ class Game():
 
     def attackRound(self, enc, ship, isFollowing = False):
         """An attack round that consists of firing all AVAILABLE weapons a max of 1 time (on unescorted ships)"""
-        if isFollowing:
-            print("Attack during day or night?")
-            print("1) Day")
-            print("2) Night")
-            choice = input()
-            match choice:
-                case "1" | "Day" | "day":
-                    timeOfDay = "Day"
-                case "2" | "Night" | "night":
-                    timeOfDay = "Night"
-        else:
-            timeRoll = d6Roll()
-            if timeRoll <= 3:
-                timeOfDay = "Day"
-            else:
-                timeOfDay = "Night"
-            # TODO deal with arctic times
+        timeOfDay = self.getTimeOfDay(isFollowing)
 
         print("Current time:", timeOfDay)
 
@@ -1340,13 +1432,14 @@ class Game():
                     print("Approaching the targets... hopefully we are not detected.")
                     detectionRoll = d6Rollx2()
                     detectionMods = 0
-
+                    time.sleep(2)
                     if self.getYear() >= 1941:
                         detectionMods = detectionMods + (self.getYear() - 1940)
                     if self.sub.knightsCross >= 3:
                         detectionMods -= 1
 
                     printRollandMods(detectionRoll, detectionMods)
+                    time.sleep(2)
                     if detectionRoll + detectionMods >= 12:
                         print("Detected! Big Problems!")
                         self.sub.attacked("Submerged", 1, self.getYear())
@@ -1667,41 +1760,6 @@ class Game():
             print(ship[target].name, "has been sunk!")
             self.shipsSunk.append(ship[target])
             time.sleep(3)
-
-
-def verifyYorN():
-    """Input prompt for a Yes or No response. Returns 'Y' or 'N' string, otherwise loops endlessly"""
-    notVerified = True
-    while notVerified:
-        inp = input("1) Yes\n2) No")
-        match inp:
-            case "1" | "Yes" | "Y" | "y" | "yes":
-                return "Y"
-            case "2" | "No" | "N" | "n" | "no":
-                return "N"
-            case _:
-                print("Unknown command. Try again.")
-                continue
-
-def printTargetShipList(ship):
-    print("Targets:")
-    for s in range(len(ship)):
-        strng = str(s + 1) + ") " + str(ship[s])
-        print(strng)
-
-def printRollandMods(roll, mods):
-    """Prints a roll for some check, plus the modifiers, then the modified roll total."""
-    total = roll + mods
-    if mods <= 0:
-        print("Roll:", roll, "• Modifiers:", mods, "| MODIFIED ROLL:", total)
-    if mods > 0:
-        toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
-        print(toPrint)
-
-
-def gameover():
-    print("GAMEOVER!")
-    raise SystemExit
 
 
 Game()

@@ -2,6 +2,7 @@ import random
 import os
 import time
 from operator import *
+from util import *
 
 class Submarine():
     """Player's Submarine. Contains type, ammo, all damage-related stats, including crew health."""
@@ -183,7 +184,6 @@ class Submarine():
 
     def torpedoResupply(self):
         """Called for in-port resupply of torpedoes to determine how many of each torpedo is taken, and assigned where"""
-        # TODO Resupply for minelaying missions (remove tubes and replace with mines)
         self.forward_G7a = 0
         self.forward_G7e = 0
         self.aft_G7a = 0
@@ -227,7 +227,7 @@ class Submarine():
 
         # ask player how many steam torpedoes for aft reserve(s)
         if self.reserves_aft > 0 and self.G7a - f1 - f2 > 0:
-            print("Remaining G7a steam topedoes: ", self.G7a - f1 - f2)
+            print("Remaining G7a steam torpedoes: ", self.G7a - f1 - f2)
             f3 = -1
             while f3 < 0 or f3 > self.aft_tubes:
                 f3 = int(input("Enter # of G7a to load into the aft reserves."))
@@ -356,7 +356,7 @@ class Submarine():
         print("Depth damage roll: ", crushdamage)
         if crushdamage < self.hull_Damage:
             print("The hull creaks until... CRUSH")
-            gameover()
+            gameover("Dove too deep and was crushed by the pressure")
         elif crushdamage == self.hull_Damage:
             print("The hull strains under the pressure. Taking additional damage...")
             self.diveToTestDepth()
@@ -407,7 +407,7 @@ class Submarine():
                 self.damage(5)
             case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
                 print("Too much damage sir, we're taking on too much water!!")
-                gameover()
+                gameover("Sub was obliterated by too much damage")
 
     def damage(self, numOfHits):
         """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
@@ -474,11 +474,11 @@ class Submarine():
         # check to see if sunk from hull damage
         if self.hull_Damage >= self.hull_hp:
             print("The hull sustains too much damage and the ship breaks apart under the damage, sinking.")
-            gameover()
+            gameover("The sub's hull took too much damage")
         if self.flooding_Damage >= self.flooding_hp:
             print("The ship takes on too much water, forcing you to blow the ballast tanks and surface.")
             # todo scuttle
-            gameover()
+            gameover("Ship Scuttled")
 
     def printStatus(self):
         print("Current damage/HP: ", self.hull_Damage, "/", self.hull_hp)
@@ -634,7 +634,7 @@ class Submarine():
                 print(toprint)
                 self.crew_health["Kommandant"] += wounds
                 if self.crew_health["Kommandant"] == 4:
-                    gameover()
+                    gameover("Kommandant has been KIA")
             case 3:
                 toprint = "1st Officer has been " + sevText
                 print(toprint)
@@ -676,18 +676,3 @@ def printRollandMods(roll, mods):
     if mods > 0:
         toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
         print(toPrint)
-
-def d6Roll():
-    """Rolls 1 die."""
-    roll = random.randint(1, 6)
-    return roll
-
-
-def d6Rollx2():
-    """Rolls 2 dice."""
-    roll = d6Roll() + d6Roll()
-    return roll
-
-def gameover():
-    print("GAMEOVER!")
-    exit()

@@ -2,9 +2,10 @@ import random
 import os
 import time
 from operator import *
+from util import *
 
 class Ship():
-    """All ships that can be targeted by the player."""
+    """A ship (freighter, tanker, warships or escort. Has a type, class, damage, HP and other things to track"""
     type = ""  # small freighter, large freighter, tanker, warship or capital ship
     hp = 0
     damage = 0
@@ -13,10 +14,14 @@ class Ship():
     clss = ""
     sunk = False
 
-    def __init__(self, type, shipsSunk, loc=""):
+
+    def __init__(self, type, shipsSunk, month, year, loc=""):
         self.type = type
         self.G7aINCOMING = 0
         self.G7eINCOMING = 0
+        self.dateSunk = ""
+        self.monthSunk = month
+        self.yearSunk = year
 
         notUniqueShip = True
         while notUniqueShip:
@@ -81,6 +86,8 @@ class Ship():
                         self.sunk = False
 
             #ensure ship is unique
+            if len(shipsSunk) == 0:
+                notUniqueShip = False
             for x in range(len(shipsSunk)):
                 if shipsSunk[x].name == self.name:
                     continue
