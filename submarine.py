@@ -139,7 +139,7 @@ class Submarine():
             "Kommandant": 0
         }
         # --------CREW STATES
-        #states are 0 = fine, 1 = LW, 2 = SW, 3 = KIA
+        #states are 0 = fine, 1 = LW, 2 = SW, 3 = KIA • -1 indicates not present
         self.crew_health = {
             "Crew 1": 0,
             "Crew 2": 0,
@@ -150,7 +150,7 @@ class Submarine():
             "Engineer": 0,
             "Doctor": 0,
             "Kommandant": 0,
-            "Abwehr Agent": 0
+            "Abwehr Agent": -1
         }
 
         #Knight's Cross decoration level
@@ -516,6 +516,27 @@ class Submarine():
                     else:
                         print(key, end=", ")
                         count += 1
+        #check if any hurt crewmen
+        lwCrew = countOf(self.crew_health.values(), 1)
+        swCrew = countOf(self.crew_health.values(), 2)
+        kaCrew = countOf(self.crew_health.values(), 3)
+        totalCasaulties = lwCrew + swCrew + kaCrew
+        count = 0
+        if totalCasaulties > 0:
+            print("Current Casualty list: ", end="")
+            for key in self.crew_health:
+                if self.crew_health[key] == 1:
+                    count += 1
+                    print(key, "(Lightly Wounded)", end="")
+                if self.crew_health[key] == 2:
+                    count += 1
+                    print(key, "(Severely Wounded)", end="")
+                if self.crew_health[key] == 3:
+                    count += 1
+                    print(key, "(KIA)", end="")
+                if count < totalCasaulties:
+                    print(", ", end="")
+            print("")
 
     def pumps(self):
         self.flooding_Damage = 0
@@ -558,6 +579,7 @@ class Submarine():
                     else:
                         print("We aren't able to repair", key, "at sea.")
                         self.systems[key] = 2
+                    time.sleep(2)
 
         self.printStatus()
 
@@ -648,7 +670,7 @@ class Submarine():
                 toprint = "1st Officer has been " + sevText
                 print(toprint)
                 self.crew_health["Watch Officer 1"] += wounds
-            case 4:
+            case 4 | 11:
                 toprint = "Engineer has been " + sevText
                 print(toprint)
                 self.crew_health["Engineer"] += wounds
@@ -675,6 +697,9 @@ class Submarine():
             case 10:
                 toprint = "Second Officer has been " + sevText
                 print(toprint)
+            case 12:
+                if self.crew_health["Abwehr Agent"] >= 0:
+                    self.crew_health["Abwehr Agent"] += wounds
 
 
 def printRollandMods(roll, mods):
