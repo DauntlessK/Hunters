@@ -19,7 +19,7 @@ from util import *
 #scuttle roll
 #crew injury rolls
 #add final subs (VIID and VIIC Flak)
-#request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or higher vers
+#request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or variants
 #capital ship count
 #resupply at sea (rulebook 14.9)
 #did not reload after second attack?
@@ -95,6 +95,9 @@ class Game():
         toReturn = self.month[self.date_month] + " - " + str(self.date_year)
         return toReturn
 
+    def getOfficerRank(self):
+        return self.rank[self.sub.crew_levels["Kommandant"]]
+
     def advanceTime(self, months, wasAtSea = True):
         """Moves time forward - if was at sea is false, it passes the months one at a time to check for promotion"""
 
@@ -131,10 +134,10 @@ class Game():
 
             if promotionRoll + promoMods <= 4:
                 self.sub.crew_levels["Kommandant"] += 1
-                print("You've been promoted! Congratulations," + self.rank[self.sub.crew_levels["Kommandant"]])
+                print("You've been promoted! Congratulations, " + self.getOfficerRank())
             else:
                 print("You have been passed over this time around for a promotion. Sorry, ",
-                      + self.rank[self.sub.crew_levels["Kommandant"]])
+                      + self.getOfficerRank())
 
             # reset counts from last promotion check
             self.shipsSunkSinceLastPromotionCheck = 0
@@ -217,7 +220,7 @@ class Game():
     def startPatrol(self):
         """Starts a new patrol, getting new assignment based on rank, date etc."""
         print("---------------")
-        print("Guten Tag,", self.rank[self.sub.crew_levels["Kommandant"]], "- The date is", self.getFullDate())
+        print("Guten Tag,", self.getOfficerRank(), "- The date is", self.getFullDate())
 
         #get next patrol orders
         if self.sub.crew_levels["Kommandant"] > 0:
@@ -236,8 +239,7 @@ class Game():
 
         print("Patrol Assignment:", self.currentOrders)
         time.sleep(2)
-        depart = "U-" + str(self.id) + " departs port early before dawn for " + self.rank[
-            self.sub.crew_levels["Kommandant"]] + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
+        depart = "U-" + str(self.id) + " departs port early before dawn for " + self.getOfficerRank() + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
         print(depart)
         self.currentLocationStep = 1
         self.patrolLength = self.getPatrolLength(self.currentOrders)
@@ -337,44 +339,6 @@ class Game():
         return orders
         ##TODO: deal with VIID and VIIC Flak boats not being allowed in med (reroll req)
 
-    def gameloop(self):
-        """The normal game loop. Get patrol, conduct patrol, return and repair+rearm."""
-        playing = True
-        while playing:
-            self.startPatrol()
-            self.patrol()
-            self.portReturn()
-            if self.date_year == 1943 and self.date_month > 5:
-                playing = False
-
-        #TODO game over stuff, high scores etc
-        gameover()
-
-    def patrol(self):
-        """Full patrol loop accounting for leaving port, transiting, patrolling and returning"""
-
-        # if Artic patrol, roll to see if permanently assigned to Arctic
-        if self.currentOrders == "Arctic":
-            if d6Roll() <= 3:
-                print("You've been assigned permanently to the Arctic.")
-                self.permArcPost = True
-
-        # while current step is less than the full patrol length (station patrol + transit boxes)
-        while self.currentLocationStep <= self.getPatrolLength(self.currentOrders):
-
-            currentBox = self.getLocation(self.currentOrders, self.currentLocationStep)
-            # if sub is patrolling area (not in transit)
-            if currentBox == self.currentOrders:
-                self.onStationSteps -= 1
-            self.getEncounter(currentBox, self.getYear(), self.randomEvent)
-
-            # end of loop - go to next box of patrol
-            self.currentLocationStep += 1
-
-        # if it was a Med patrol, set U boat permanently to Med
-        if self.currentOrders == "Mediterranean":  #
-            self.permMedPost = True
-
     def portReturn(self):
         """Called after patrol to deal with notification, print out sunk ships so far, and then deal with repair and rearm."""
         # TODO messages based on repair (safely returns, returns with minor damage, limps back to port, etc?)
@@ -407,20 +371,26 @@ class Game():
 
         #determine if crew rank increases
         if self.successfulPatrols >= 3:
-            print("We've made 3 successfull patrols!")
+            print("We've made 3 successful patrols! Our ", end= "")
             crewAd = d6Roll()
             match crewAd:
                 case 1:
                     self.sub.crew_levels["Engineer"] = 1
+                    print("Engineer has become an expert!")
                 case 2:
                     self.sub.crew_levels["Doctor"] = 1
+                    print("Doctor has become an expert!")
                 case 3:
                     self.sub.crew_levels["Watch Officer 1"] = 1
+                    print("Watch Officer 1 has become an expert!")
                 case 4:
                     self.sub.crew_levels["Watch Officer 2"] = 1
+                    print("Watch Officer 2 has become an expert!")
                 case 5 | 6:
                     self.sub.crew_levels["Crew"] += 1
+                    print("crew's experience level has increased!")
                     if self.sub.crew_levels["Crew"] > 3:
+                        print("They can't gain more experience!")
                         self.sub.crew_levels["Crew"] = 3
             self.successfulPatrols = 0
 
@@ -439,7 +409,7 @@ class Game():
         for x in range(len(self.shipsSunk)):
             totalTonnage = totalTonnage + self.shipsSunk[x].GRT
         totalTonnage = f"{totalTonnage:,}"
-        print("You've sunk", totalTonnage, "tons.")
+        print("You've sunk", str(len(shipsSunk)), "totaling", totalTonnage, "tons.")
         for x in range(len(self.shipsSunk)):
             if x+1 != len(self.shipsSunk):
                 print(self.shipsSunk[x], end=", ")
@@ -514,6 +484,98 @@ class Game():
                 self.monthOfLastKnightsCrossAward = self.getMonth()
                 self.yearOfLastKnightsCrossAward = self.getYear()
 
+    def gameloop(self):
+        """The normal game loop. Get patrol, conduct patrol, return and repair+rearm."""
+        playing = True
+        while playing:
+            self.startPatrol()
+            self.patrol()
+            self.portReturn()
+            if self.date_year == 1943 and self.date_month > 5:
+                playing = False
+
+        #TODO game over stuff, high scores etc
+        gameover()
+
+    def patrol(self):
+        """Full patrol loop accounting for leaving port, transiting, patrolling and returning"""
+
+        # if Artic patrol, roll to see if permanently assigned to Arctic
+        if self.currentOrders == "Arctic":
+            if d6Roll() <= 3:
+                print("You've been assigned permanently to the Arctic.")
+                self.permArcPost = True
+
+        # while current step is less than the full patrol length (station patrol + transit boxes)
+        while self.currentLocationStep <= self.getPatrolLength(self.currentOrders):
+
+            currentBox = self.getLocation(self.currentOrders, self.currentLocationStep)
+            self.printPatrolStatus(currentBox)
+
+            if self.sub.dieselsInop() == 2:
+                if self.currentLocationStep == self.patrolLength - 1:
+                    print("We are towed back to port.")
+                else:
+                    print("Both Diesel engines are knocked out. We must scuttle the boat!")
+                    #TODO SCUTTLE ROLL
+                    gameover("Scuttled due to engines being knocked out.")
+            elif self.sub.dieselsInop() == 1:
+                print("We must abort the patrol, one our diesel engines are damaged beyond repair.")
+                self.abortPatrol()
+
+            #skip first iteration of asking for action (on departure)- otherwise ask for next action before making roll
+            if self.currentLocationStep == 1:
+                invalid = False
+            else:
+                invalid = True
+            while invalid:
+                action = verifyNextAction()
+                match action:
+                    case "Continue":
+                        invalid = False
+                    case "Stores":
+                        self.sub.subSupplyPrintout()
+                    case "Damage":
+                        self.sub.printStatus()
+                    case "Abort":
+                        print("Aborting patrol.")
+                        self.abortPatrol()
+                        currentBox = "Transit"
+                        invalid = False
+
+            # if sub is patrolling area (not in transit)
+            if currentBox == self.currentOrders:
+                self.onStationSteps -= 1
+            self.getEncounter(currentBox, self.getYear(), self.randomEvent)
+            #roll second time for 1 inop... 2 rolls for encounter when aborting and 1 diesel engine knocked out
+            if self.sub.dieselsInop() == 1:
+                self.getEncounter(currentBox, self.getYear(), self.randomEvent)
+
+            # end of loop - go to next box of patrol
+            self.currentLocationStep += 1
+
+        # if it was a Med patrol, set U boat permanently to Med
+        if self.currentOrders == "Mediterranean":
+            self.permMedPost = True
+
+    def abortPatrol(self):
+        """Aborts current patrol, setting the player's current location to the end of the patrol less one- so two
+        transits take place before arrive back."""
+        self.currentLocationStep = self.getPatrolLength(self.currentOrders) - 1
+
+    def drawPatrolMeter(self):
+        numDashes = self.getPatrolLength(self.currentOrders)
+        print("<", end = "")
+        for x in range (numDashes):
+            if x == self.currentLocationStep - 1:
+                print(" 0 ", end = "")
+            else:
+                print(" - ", end = "")
+        print(">")
+
+    def printPatrolStatus(self, currentBox):
+        self.drawPatrolMeter()
+        print("Current Box:", currentBox)
 
     #--------------------------------------------- Patrol checks and encounter checks
 
@@ -1017,6 +1079,10 @@ class Game():
         for x in range (len(ship)):
             if ship[x].sunk:
                 shipsSunk += 1
+                #count sunken capital ships (over 22k GRT) as they count towards getting KC awards
+                if ship[x].type == "Capital Ship" and ship[x].GRT > 22000:
+                    print("We've sunk a major warship!")
+                    self.capitalShipsSunkSinceLastKnightsCross += 1
             if ship[x].damage > 0 and ship[x].sunk == False:
                 shipsDamaged += 1
 
@@ -1052,7 +1118,7 @@ class Game():
                         followPrompt = "2"
 
                     match followPrompt:
-                        #Following damaged ships - remove undamaged ships, automatic follow, see if it was escorted
+                        #Following damaged ship(s) - remove undamaged ships, automatic follow, see if it was escorted
                         case "1":
                             self.followFlow(ship)
                         #following convoy, roll to follow etc
@@ -1110,7 +1176,7 @@ class Game():
         newShip = []
         for s in range(len(ship)):
             if ship[s].damage > 0 and (ship[s].damage < ship[s].hp):
-                print("Adding ship to follow: ", str(ship[s]))  #DEBUG
+                print("Adding ship to follow: ", str(ship[s]), " | DAMAGE:", str(ship[s].damage))  #DEBUG
                 newShip.append(ship[s])
         ship = newShip
         if escortedRoll <= 4:
@@ -1324,38 +1390,51 @@ class Game():
                     return "Night"
 
     def getAttackType(self, ship, depth, timeOfDay, r):
-        """Gets a valid attack type and returns string of the attack."""
-        bowSalvoAvail = True
-        aftSalvoAvail = True
-        secondSalvoAvail = True
-        deckGunAvail = True
-
-        print("How should we attack?")
+        """Gets a valid attack type and calls the method relavant to the attack selected. Exits method if no valid attack"""
+        #determine valid attack options first
         #bow
         if self.sub.systems["Forward Torpedo Doors"] == 0 and (
                 self.sub.forward_G7a > 0 or self.sub.forward_G7e > 0) and self.firedForward == False and self.sub.minesLoadedForward == False:
-            print("1) Bow Torpedo Salvo")
+            bowSalvoAvail = True
         else:
-            print("1) -UNAVAILABLE- Bow Torpedo Salvo ")
             bowSalvoAvail = False
         #aft
         if self.sub.systems["Aft Torpedo Doors"] == 0 and (self.sub.aft_G7a > 0 or self.sub.aft_G7e > 0) and self.firedAft == False and self.sub.minesLoadedAft == False:
-            print("2) Aft Torpedo Salvo")
+            aftSalvoAvail = True
         else:
-            print("2) -UNAVAILABLE- Aft Torpedo Salvo")
             aftSalvoAvail = False
         #bow and aft salvo
         if bowSalvoAvail and aftSalvoAvail and timeOfDay == "Night" and depth == "Surfaced":
-            print("3) Forward & Aft Torpedo Salvo")
+            secondSalvoAvail = True
         else:
-            print("3) -UNAVAILABLE- Forward & Aft Torpedo Salvo")
             secondSalvoAvail = False
         #deck gun
         if self.sub.deck_gun_ammo > 0 and depth == "Surfaced" and ship[0].type != "Escort" and self.firedDeckGun == False and self.sub.systems["Deck Gun"] == 0:
+            deckGunAvail = True
+        else:
+            deckGunAvail = False
+
+        #TODO check attack availabilty first, then print options0
+        if bowSalvoAvail == False and aftSalvoAvail == False and deckGunAvail == False:
+            return "exitAttack"
+
+        print("How should we attack?")
+        if bowSalvoAvail:
+            print("1) Bow Torpedo Salvo")
+        else:
+            print("1) -UNAVAILABLE- Bow Torpedo Salvo ")
+        if aftSalvoAvail:
+            print("2) Aft Torpedo Salvo")
+        else:
+            print("2) -UNAVAILABLE- Aft Torpedo Salvo")
+        if secondSalvoAvail:
+            print("3) Forward & Aft Torpedo Salvo")
+        else:
+            print("3) -UNAVAILABLE- Forward & Aft Torpedo Salvo")
+        if deckGunAvail:
             print("4) Engage with Deck Gun")
         else:
             print("4) -UNAVAILABLE- Engage with Deck Gun")
-            deckGunAvail = False
 
         notValid = True
         while notValid:
@@ -1396,6 +1475,10 @@ class Game():
                 return exit
             else:
                 print("We successfully followed them.")
+                if timeOfDay == "Night":
+                    timeOfDay = "Day"
+                else:
+                    timeOfDay = "Night"
 
         #call off attack if periscope is damaged and day, because submerged attacks cannot be made
         if self.sub.systems["Periscope"] >= 1 and timeOfDay == "Day":
@@ -1470,7 +1553,7 @@ class Game():
             self.getAttackType(ship, depth, timeOfDay, r)
 
         # post shot escort detection
-        if ship[0].type == "Escort":
+        if ship[0].type == "Escort" and not detectedOnClose:
             print("Escort incoming on our position!")
             time.sleep(2)
             self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired)
@@ -1761,5 +1844,18 @@ class Game():
             self.shipsSunk.append(ship[target])
             time.sleep(3)
 
+def gameover(cause=""):
+    print("++++++++++++++GAMEOVER!++++++++++++++")
+    print("Carrer summary:")
+    print(self.rank[self.sub.crew_levels["Kommandant"]], self.kmdt)
+    print("Number of patrols:", self.patrolNum)
+    print("End date:", self.getFullDate)
+    print("Cause:", cause)
+    print("Ships sunk:", + str(len(self.shipsSunk)))
+    damageCount = 0
+    for x in range(len(self.shipsSunk)):
+        damageCount += self.shipsSunk[x].damage
+    print("Damage done:", damageCount)
+    raise SystemExit
 
 Game()

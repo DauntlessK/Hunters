@@ -25,6 +25,24 @@ def verifyYorN():
                 print("Unknown command. Try again.")
                 continue
 
+def verifyNextAction():
+    """For each step of a patrol, ask for what to do next. Returns string: 'Continue', 'Supply', 'Status', 'Abort'"""
+    notVerified = True
+    while notVerified:
+        inp = input("1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol")
+        match inp:
+            case "1" | "Continue" | "C" | "continue" | "c":
+                return "Continue"
+            case "2" | "Stores" | "S" | "stores" | "s":
+                return "Stores"
+            case "3" | "Damage" | "D" | "damage" | "d":
+                return "Damage"
+            case "4" | "Abort" | "A" | "abort" | "a":
+                return "Abort"
+            case _:
+                print("Unknown command. Try again.")
+                continue
+
 def printTargetShipList(ship):
     print("Targets:")
     for s in range(len(ship)):
@@ -39,18 +57,3 @@ def printRollandMods(roll, mods):
     if mods > 0:
         toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
         print(toPrint)
-
-
-def gameover(cause=""):
-    print("++++++++++++++GAMEOVER!++++++++++++++")
-    print("Carrer summary:")
-    print(self.rank[self.sub.crew_levels["Kommandant"]], self.kmdt)
-    print("Number of patrols:", self.patrolNum)
-    print("End date:", self.getFullDate)
-    print("Cause:", cause)
-    print("Ships sunk:", + str(len(self.shipsSunk)))
-    damageCount = 0
-    for x in range(len(self.shipsSunk)):
-        damageCount += self.shipsSunk[x].damage
-    print("Damage done:", damageCount)
-    raise SystemExit

@@ -480,6 +480,15 @@ class Submarine():
             # todo scuttle
             gameover("Ship Scuttled")
 
+    def dieselsInop(self):
+        """Returns int of how many inoperative diesel engines"""
+        numInOp = 0
+        if self.systems["Diesel Engine #1"] == 2:
+            numInOp += 1
+        if self.systems["Diesel Engine #2"] == 2:
+            numInOp += 1
+        return numInOp
+
     def printStatus(self):
         print("Current damage/HP: ", self.hull_Damage, "/", self.hull_hp)
         print("Current flooding/HP ", self.flooding_Damage, "/", self.flooding_hp)
