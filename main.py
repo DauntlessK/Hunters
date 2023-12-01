@@ -134,10 +134,9 @@ class Game():
 
             if promotionRoll + promoMods <= 4:
                 self.sub.crew_levels["Kommandant"] += 1
-                print("You've been promoted! Congratulations, " + self.getOfficerRank())
+                print("You've been promoted! Congratulations,", self.getOfficerRank())
             else:
-                print("You have been passed over this time around for a promotion. Sorry, ",
-                      + self.getOfficerRank())
+                print("You have been passed over this time around for a promotion. Sorry,", self.getOfficerRank())
 
             # reset counts from last promotion check
             self.monthsSinceLastPromotionCheck = 0
@@ -683,7 +682,8 @@ class Game():
     def getEncounter(self, loc, year, randomEvent):
         """Determines which location encounter chart to use, then rolls against and returns the string encounter name"""
         roll = d6Rollx2()
-        print("Roll for location:", loc, "-", roll)
+        if loc != "Additional Round of Combat":
+            print("Roll for location:", loc, "-", roll)
 
         # First check if random event (natural 12)
         if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":

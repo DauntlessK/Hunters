@@ -534,7 +534,7 @@ class Submarine():
                 if self.crew_health[key] == 3:
                     count += 1
                     print(key, "(KIA)", end="")
-                if count < totalCasaulties:
+                if count < totalCasaulties and self.crew_health[key] > 0:
                     print(", ", end="")
             print("")
 

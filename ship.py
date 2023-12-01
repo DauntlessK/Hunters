@@ -100,7 +100,7 @@ class Ship():
 
     def fireG7a(self, num):
         """Adds a steam torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
-        self.G7aINCOMING = self.G7eINCOMING + num
+        self.G7aINCOMING = self.G7aINCOMING + num
 
     def fireG7e(self, num):
         """Adds an electric torpedo to the ship's incoming type. Helps keep track of how many to roll against."""
