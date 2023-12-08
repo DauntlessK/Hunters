@@ -25,8 +25,11 @@ from util import *
 #did not reload after second attack?
 #hydrophones damage?
 #medic sw or kia rolls for crew members hurt each patrol movement
-#forward and aft salvo targeting different targets
+#forward and aft salvo targeting different targets- better interaction picking torpedoes and targets when firing fore and aft
 #test dive depth on subsequent rounds for a surface-attack
+#multiple ships are showing up of the same name
+#issue with diesel inop and aborting
+
 
 #BUGS SEEN-
 #ABORT PATROL ACTING FUNNY

@@ -118,7 +118,7 @@ class Submarine():
 
         # used to roll against to get damage location on sub
         self.damageChart = ["Batteries", "flooding", "crew injury", "Periscope", "Dive Planes", "Electric Engine #1",
-                            "flooding", "Electric Engine #2", "Diesel Engine #1", "Flak guns", "Diesel Engine #2",
+                            "flooding", "Electric Engine #2", "Diesel Engine #1", "Flak Guns", "Diesel Engine #2",
                             "3.7 Flak",
                             "flooding", "minor", "hull", "crew injury", "hull", "Deck Gun",
                             "hull", "Radio", "flooding", "flooding", "hull", "Flak Gun",
@@ -564,7 +564,7 @@ class Submarine():
                         toRoll = 4
                     elif key == "Hydrophones" or key == "Dive Planes" or key == "Radio" or key == "Fuel Tanks":
                         toRoll = 2
-                    elif "Gun" in key:
+                    elif "Gun" in key or "gun" in key:
                         toRoll = 2
                     elif key == "Periscope" or key == "Batteries":
                         toRoll = 4
@@ -572,6 +572,7 @@ class Submarine():
                         toRoll = 2
                     else:
                         print("Error getting damaged system repair roll.")
+                        print(key)
 
                     if repairRoll + repairMod <= toRoll:
                         print("Successfully repaired", key)
