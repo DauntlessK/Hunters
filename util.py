@@ -25,11 +25,14 @@ def verifyYorN():
                 print("Unknown command. Try again.")
                 continue
 
-def verifyNextAction():
+def verifyNextAction(aborting):
     """For each step of a patrol, ask for what to do next. Returns string: 'Continue', 'Supply', 'Status', 'Abort'"""
     notVerified = True
     while notVerified:
-        inp = input("1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol")
+        if aborting:
+            inp = input("1) Continue\n2) Stores Report\n3) Damage Report")
+        else:
+            inp = input("1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol")
         match inp:
             case "1" | "Continue" | "C" | "continue" | "c":
                 return "Continue"
@@ -38,7 +41,11 @@ def verifyNextAction():
             case "3" | "Damage" | "D" | "damage" | "d":
                 return "Damage"
             case "4" | "Abort" | "A" | "abort" | "a":
-                return "Abort"
+                if not aborting:
+                    return "Abort"
+                else:
+                    print("Unknown command. Try again.")
+                    continue
             case _:
                 print("Unknown command. Try again.")
                 continue

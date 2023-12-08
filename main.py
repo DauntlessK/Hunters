@@ -27,12 +27,10 @@ from util import *
 #medic sw or kia rolls for crew members hurt each patrol movement
 #forward and aft salvo targeting different targets- better interaction picking torpedoes and targets when firing fore and aft
 #test dive depth on subsequent rounds for a surface-attack
-#multiple ships are showing up of the same name
-#issue with diesel inop and aborting
 
 
 #BUGS SEEN-
-#ABORT PATROL ACTING FUNNY
+
 
 class Game():
 
@@ -61,7 +59,7 @@ class Game():
         self.capitalShipsSunkSinceLastKnightsCross = 0
         self.monthOfLastKnightsCrossAward = -1
         self.yearOfLastKnightsCrossAward = -1
-        self.sub.subSupplyPrintout()
+        self.sub.subSupplyPrintout(False)
         self.currentOrders = ""
         self.patrolCount = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth",
                             "tenth", "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth",
@@ -74,9 +72,11 @@ class Game():
         self.unsuccessfulPatrolsInARow = 0
         self.lastPatrolWasUnsuccessful = False
         self.randomEvent = False
+        self.abortingPatrol = False
         self.currentLocationStep = 0
+        self.patrolArray = []
         self.onStationSteps = self.sub.patrol_length
-        self.patrolLength = 0
+        self.currentBox = 0
         self.G7aFired = 0
         self.G7eFired = 0
         self.firedForward = False
@@ -220,34 +220,6 @@ class Game():
                 print("Invalid Sub Type.")
                 gameover()
 
-    def startPatrol(self):
-        """Starts a new patrol, getting new assignment based on rank, date etc."""
-        print("---------------")
-        print("Guten Tag,", self.getOfficerRank(), "- The date is", self.getFullDate())
-
-        #get next patrol orders
-        if self.sub.crew_levels["Kommandant"] > 0:
-            print("PATROL ASSIGNMENT: Roll to choose next patrol?")
-            if verifyYorN() == "Y":
-                roll = d6Roll()
-                print("Die roll:", roll)
-                #check to see if player can select orders
-                if roll <= self.sub.crew_levels["Kommandant"]:
-                    print("You may select your patrol.")
-                    self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), True)
-                else:
-                    self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
-        else:
-            self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
-
-        print("Patrol Assignment:", self.currentOrders)
-        time.sleep(2)
-        depart = "U-" + str(self.id) + " departs port early before dawn for " + self.getOfficerRank() + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
-        print(depart)
-        self.currentLocationStep = 1
-        self.patrolLength = self.getPatrolLength(self.currentOrders)
-        time.sleep(3)
-
     def getPatrolLength(self, patrol):
         """Determines full length of a given patrol (number of on station steps + all transit steps"""
         match patrol:
@@ -305,14 +277,6 @@ class Game():
 
         orders = self.validatePatrol(orders)
 
-        # change time on station (onStationSteps) by one less if North American Orders
-        if orders == "North America" or orders == "Caribbean":
-            self.onStationSteps = self.sub.patrol_length - 1
-        elif "Minelaying" in orders or "Abwehr" in orders:
-            self.onStationSteps = self.sub.patrol_length - 1
-        else:
-            self.onStationSteps = self.sub.patrol_length
-
         self.currentOrders = orders
 
     def validatePatrol(self, orders):
@@ -344,6 +308,129 @@ class Game():
 
         return orders
         ##TODO: deal with VIID and VIIC Flak boats not being allowed in med (reroll req)
+
+    def gameloop(self):
+        """The normal game loop. Get patrol, conduct patrol, return and repair+rearm."""
+        playing = True
+        while playing:
+            self.startPatrol()
+            self.patrol()
+            self.portReturn()
+            if self.date_year == 1943 and self.date_month > 5:
+                playing = False
+
+        #TODO game over stuff, high scores etc
+        gameover()
+
+    def startPatrol(self):
+        """Starts a new patrol, getting new assignment based on rank, date etc."""
+        print("---------------")
+        print("Guten Tag,", self.getOfficerRank(), "- The date is", self.getFullDate())
+
+        #get next patrol orders
+        if self.sub.crew_levels["Kommandant"] > 0:
+            print("PATROL ASSIGNMENT: Roll to choose next patrol?")
+            if verifyYorN() == "Y":
+                roll = d6Roll()
+                print("Die roll:", roll)
+                #check to see if player can select orders
+                if roll <= self.sub.crew_levels["Kommandant"]:
+                    print("You may select your patrol.")
+                    self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), True)
+                else:
+                    self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
+        else:
+            self.getPatrol(self.getMonth(), self.getYear(), d6Roll(), self.sub.getType(), False)
+
+        print("Patrol Assignment:", self.currentOrders)
+        time.sleep(2)
+        depart = "U-" + str(self.id) + " departs port early before dawn for " + self.getOfficerRank() + " " + self.kmdt + "'s " + str(self.patrolCount[self.patrolNum] + " patrol.")
+        print(depart)
+        self.currentBox = 1
+        self.abortingPatrol = False
+        self.buildPatrol(self.currentOrders)
+        time.sleep(3)
+
+    def patrol(self):
+        """Full patrol loop accounting for leaving port, transiting, patrolling and returning"""
+
+        # if Artic patrol, roll to see if permanently assigned to Arctic
+        if self.currentOrders == "Arctic":
+            if d6Roll() <= 3:
+                print("You've been assigned permanently to the Arctic.")
+                self.permArcPost = True
+
+        # while current step is less than the full patrol length (station patrol + transit boxes)
+        for x in range (len(self.patrolArray)):
+
+            if x == 0: #skip first entry in patrol array which is port
+                continue
+            if self.abortingPatrol and x < len(patrol) - 1:
+                continue
+
+            currentBoxName = self.patrolArray[x]
+
+            if self.sub.dieselsInop() == 2:
+                if x == len(self.patrolArray):
+                    print("We are towed back to port.")
+                    break
+                else:
+                    print("Both Diesel engines are knocked out. We must scuttle the boat!")
+                    #TODO SCUTTLE ROLL
+                    gameover("Scuttled due to engines being knocked out.")
+            elif self.sub.dieselsInop() == 1 and not self.abortingPatrol:
+                print("We must abort the patrol, one our diesel engines are damaged beyond repair.")
+                self.abortingPatrol = True
+                currentBoxName = "Transit"
+
+            self.printPatrolStatus(currentBoxName, x)
+
+            #skip first iteration of asking for action (on departure)- otherwise ask for next action before making roll
+            if x == 1:
+                invalid = False
+            else:
+                self.currentBox = x
+                invalid = True
+            while invalid:
+                action = verifyNextAction(self.abortingPatrol)
+                match action:
+                    case "Continue":
+                        invalid = False
+                    case "Stores":
+                        self.sub.subSupplyPrintout(False)
+                    case "Damage":
+                        self.sub.printStatus()
+                    case "Abort":
+                        print("Aborting patrol.")
+                        self.abortingPatrol = True
+                        invalid = False
+            if self.abortingPatrol and x < len(patrol) - 1:
+                continue
+
+            self.getEncounter(currentBoxName, self.getYear(), self.randomEvent)
+
+            #roll second time for 1 inop... 2 rolls for encounter when aborting and 1 diesel engine knocked out
+            if self.sub.dieselsInop() == 1 and currentBoxName == "Transit":
+                self.getEncounter(currentBoxName, self.getYear(), self.randomEvent)
+
+
+        # check at end of patrol... if it was a Med patrol, set U boat permanently to Med
+        if self.currentOrders == "Mediterranean":
+            self.permMedPost = True
+
+    def drawPatrolMeter(self, currentBoxNum):
+        numDashes = self.getPatrolLength(self.currentOrders)
+        print("<", end = "")
+        for x in range (numDashes):
+            if x == currentBoxNum - 1:
+                print(" 0 ", end = "")
+            else:
+                print(" - ", end = "")
+        print(">")
+
+    def printPatrolStatus(self, currentBox, currentBoxNum):
+        self.drawPatrolMeter(currentBoxNum)
+        print("Current Box:", currentBox)
 
     def portReturn(self):
         """Called after patrol to deal with notification, print out sunk ships so far, and then deal with repair and rearm."""
@@ -429,7 +516,8 @@ class Game():
             print(self.awardName[self.sub.knightsCross])
 
         self.patrolNum += 1
-        time.sleep(7)
+        self.patrolArray.clear()
+        time.sleep(5)
 
         #rearm boat
         self.sub.torpedoResupply()
@@ -497,190 +585,48 @@ class Game():
                 self.monthOfLastKnightsCrossAward = self.getMonth()
                 self.yearOfLastKnightsCrossAward = self.getYear()
 
-    def gameloop(self):
-        """The normal game loop. Get patrol, conduct patrol, return and repair+rearm."""
-        playing = True
-        while playing:
-            self.startPatrol()
-            self.patrol()
-            self.portReturn()
-            if self.date_year == 1943 and self.date_month > 5:
-                playing = False
-
-        #TODO game over stuff, high scores etc
-        gameover()
-
-    def patrol(self):
-        """Full patrol loop accounting for leaving port, transiting, patrolling and returning"""
-
-        # if Artic patrol, roll to see if permanently assigned to Arctic
-        if self.currentOrders == "Arctic":
-            if d6Roll() <= 3:
-                print("You've been assigned permanently to the Arctic.")
-                self.permArcPost = True
-
-        # while current step is less than the full patrol length (station patrol + transit boxes)
-        while self.currentLocationStep <= self.getPatrolLength(self.currentOrders):
-
-            currentBox = self.getLocation(self.currentOrders, self.currentLocationStep)
-            self.printPatrolStatus(currentBox)
-
-            if self.sub.dieselsInop() == 2:
-                if self.currentLocationStep == self.patrolLength - 1:
-                    print("We are towed back to port.")
-                else:
-                    print("Both Diesel engines are knocked out. We must scuttle the boat!")
-                    #TODO SCUTTLE ROLL
-                    gameover("Scuttled due to engines being knocked out.")
-            elif self.sub.dieselsInop() == 1:
-                print("We must abort the patrol, one our diesel engines are damaged beyond repair.")
-                self.abortPatrol()
-
-            #skip first iteration of asking for action (on departure)- otherwise ask for next action before making roll
-            if self.currentLocationStep == 1:
-                invalid = False
-            else:
-                invalid = True
-            while invalid:
-                action = verifyNextAction()
-                match action:
-                    case "Continue":
-                        invalid = False
-                    case "Stores":
-                        self.sub.subSupplyPrintout()
-                    case "Damage":
-                        self.sub.printStatus()
-                    case "Abort":
-                        print("Aborting patrol.")
-                        self.abortPatrol()
-                        currentBox = "Transit"
-                        invalid = False
-
-            # if sub is patrolling area (not in transit)
-            if currentBox == self.currentOrders:
-                self.onStationSteps -= 1
-            self.getEncounter(currentBox, self.getYear(), self.randomEvent)
-            #roll second time for 1 inop... 2 rolls for encounter when aborting and 1 diesel engine knocked out
-            if self.sub.dieselsInop() == 1:
-                self.getEncounter(currentBox, self.getYear(), self.randomEvent)
-
-            # end of loop - go to next box of patrol
-            self.currentLocationStep += 1
-
-        # if it was a Med patrol, set U boat permanently to Med
-        if self.currentOrders == "Mediterranean":
-            self.permMedPost = True
-
-    def abortPatrol(self):
-        """Aborts current patrol, setting the player's current location to the end of the patrol less one- so two
-        transits take place before arrive back."""
-        self.currentLocationStep = self.getPatrolLength(self.currentOrders) - 1
-        self.onStationSteps = 0
-
-    def drawPatrolMeter(self):
-        numDashes = self.getPatrolLength(self.currentOrders)
-        print("<", end = "")
-        for x in range (numDashes):
-            if x == self.currentLocationStep - 1:
-                print(" 0 ", end = "")
-            else:
-                print(" - ", end = "")
-        print(">")
-
-    def printPatrolStatus(self, currentBox):
-        self.drawPatrolMeter()
-        print("Current Box:", currentBox)
-
     #--------------------------------------------- Patrol checks and encounter checks
 
-    def getLocation(self, patrol, step):
-        """Gets current location box on a patrol to determine encounter type (transit, Atlantic, etc)"""
-        # TODO wolfpacks?
-        #if minelaying patrol is beyond mission square, change orders to just regular british isles
-        if self.onStationSteps < self.sub.patrol_length and "Minelaying" in self.currentOrders:
-            patrol = patrol.replace("(Minelaying)", "")
-        #if abwehr patrol is beyond mission square, change orders to just regular NA or British Isles patrol
-        if self.onStationSteps < self.sub.patrol_length and "Abwehr" in self.currentOrders:
-            patrol = patrol.replace("(Abwehr Agent Delivery)", "")
+    def buildPatrol(self, patrol):
+        """Builds array of strings, each item being a step in the patrol. Step 0 is port."""
+        #build patrol for non NA patrols
+        #TODO WOLFPACKS
+        NAorders = False
+        if self.currentOrders == "North America" or self.currentOrders == "Carribean":
+            NAorders = True
 
-        match step:
-            case 1:
-                if patrol == "Norway" or patrol == "Arctic":
-                    return "Transit"
-                elif self.francePost and self.permMedPost == False:
-                    return "Bay of Biscay"
+        patrolLength = self.getPatrolLength(self.currentOrders)
+        for x in range (patrolLength + 1):
+            if x == 0:
+                self.patrolArray.append("Port")
+            elif x == 1 or x == patrolLength:
+                if self.francePost and not self.permMedPost:
+                    self.patrolArray.append("Bay of Biscay")
                 else:
-                    return "Transit"
-            case 2:
-                if patrol == "Mediterranean" and self.permMedPost == False:
-                    return "Gibraltar Passage"
-                else:
-                    return "Transit"
-            case 3:
-                if patrol == "North America" or patrol == "Caribbean":
-                    return "Transit"
-                else:
-                    if "Minelaying" in self.currentOrders:
-                        return "Mission"
-                    elif "Abwehr" in self.currentOrders and "British Isles" in self.currentOrders:
-                        return "Mission"
-                    else:
-                        return patrol
-            case 4:
-                if patrol == "North America" or patrol == "Caribbean":
-                    return "Transit"
-                else:
-                    return patrol
-            case 5:
-                if "Abwehr" in self.currentOrders and "North America" in self.currentOrders:
-                    return "Mission"
-                else:
-                    return patrol
-            case 6:
-                if self.onStationSteps == 0:
-                    if self.currentLocationStep == self.patrolLength - 1:
-                        return "Transit"
-                    elif self.currentLocationStep == self.patrolLength:
-                        if self.permArcPost or self.francePost:
-                            return "Bay of Biscay"
-                        else:
-                            return "Transit"
-                    elif patrol == "Mediterranean" or patrol == "Arctic":
-                        return "Transit"
-                    else:
-                        print("ERROR getting loc")
-                else:
-                    return patrol
-            case 7:
-                if self.onStationSteps == 0:
-                    if self.currentLocationStep == self.patrolLength - 1:
-                        return "Transit"
-                    elif self.currentLocationStep == self.patrolLength:
-                        if self.permArcPost or self.francePost:
-                            return "Bay of Biscay"
-                        else:
-                            return "Transit"
-                    elif patrol == "Mediterranean" or patrol == "Arctic":
-                        return "Transit"
-                    else:
-                        print("ERROR getting loc")
-                else:
-                    return patrol
-            case _:
-                if self.onStationSteps == 0:
-                    if self.currentLocationStep == self.patrolLength - 1:
-                        return "Transit"
-                    elif self.currentLocationStep == self.patrolLength:
-                        if self.permArcPost or self.francePost:
-                            return "Bay of Biscay"
-                        else:
-                            return "Transit"
-                    elif patrol == "Mediterranean" or patrol == "Arctic":
-                        return "Transit"
-                    else:
-                        print("ERROR getting loc")
-                else:
-                    return patrol
+                    self.patrolArray.append("Transit")
+            elif x == 2 or x == patrolLength - 1:
+                self.patrolArray.append("Transit")
+            elif x == 3 and "Abwehr" in self.currentOrders and not NAorders:
+                self.patrolArray.append("Mission")
+            elif x == 3 and "Minelaying" in self.currentOrders and not NAorders:
+                self.patrolArray.append("Mission")
+            elif (x == 3 or x == patrolLength - 2) and NAorders:
+                self.patrolArray.append("Transit")
+            elif (x == 4 or x == patrolLength - 3) and NAorders:
+                self.patrolArray.append("Transit")
+            elif x == 5 and "Abwehr" in self.currentOrders and NAorders:
+                self.patrolArray.append("Mission")
+            elif x == 5 and "Minelaying" in self.currentOrders and NAorders:
+                self.patrolArray.append("Mission")
+            else:
+                newp = self.currentOrders
+                if "Abwehr" in self.currentOrders:
+                    newp = self.currentOrders.replace("(Abwehr Agent Delivery)", "")
+                elif "Minelaying" in self.currentOrders:
+                    newp = self.currentOrders.replace("(Minelaying)", "")
+                self.patrolArray.append(newp)
+
+        print(self.patrolArray)
 
     def getEncounter(self, loc, year, randomEvent):
         """Determines which location encounter chart to use, then rolls against and returns the string encounter name"""
@@ -692,13 +638,6 @@ class Game():
         if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":
             print("Random Event! TODO")
             return "Random Event"
-
-        # determine if this is a mission box to roll against mission
-        if (loc == "British Isles (Minelaying)" or loc == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
-            loc = "Mission"
-        #elif loc == "British Isles (Minelaying)" and self.currentLocationStep WORK OUT IF AT PATROL LOC TO CHANGE TO BRITISH ISLES
-        if loc == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
-            loc = "Mission"
 
         match loc:
             case "Transit":  # Transit encounter chart
@@ -891,27 +830,6 @@ class Game():
                     self.sub.crew_health["Abwehr Agent"] = -1
                     self.sunkOnCurrentPatrol += 1
 
-
-
-    ##----------------------------------------------- PATROL BOXES (TO DETERMINE WHICH ENCOUNTER TO ROLL)
-
-    def patrolBoxTransit(self):
-        """When ship is on a transit box."""
-        if self.currentLocationStep == 1 and (self.currentOrders == "Artic" or self.currentOrders == "Norway"):
-            print("Your U-Boat sails North towards its patrol area.")
-        elif self.onStationSteps > 0:
-            print("Your U-Boat sails on towards its assigned patrol area.")
-        else:
-            print("Your U-Boat turns around and heads for home.")
-        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.getYear(),
-                          self.randomEvent)
-
-    def patrolBoxBayOfBiscay(self):
-        """When ship is on the Bay of Biscay box"""
-        print("Your U-Boat transits across the perilous Bay of Biscay.")
-        self.getEncounter(self.getLocation(self.currentOrders, self.currentLocationStep), self.getYear(),
-                          self.randomEvent)
-
     ##----------------------------------------------- ENCOUNTERS
 
     def encounterNone(self, loc):
@@ -1013,9 +931,7 @@ class Game():
                 drm -= 1
             case 1943:
                 drm -= 2
-        if (patrolType == "British Isles (Minelaying)" or patrolType == "British Isles (Abwehr Agent Delivery)") and self.currentLocationStep == 3:
-            drm -= 1
-        if patrolType == "North America (Abwehr Agent Delivery)" and self.currentLocationStep == 5:
+        if self.patrolArray[self.currentBox] == "Mission":
             drm -= 1
 
         print("Roll for crash dive!")
@@ -1233,7 +1149,6 @@ class Game():
         newShip = []
         for s in range(len(ship)):
             if ship[s].damage > 0 and (ship[s].damage < ship[s].hp):
-                print("Adding ship to follow: ", str(ship[s]), " | DAMAGE:", str(ship[s].damage))  #DEBUG
                 newShip.append(ship[s])
         ship = newShip
         if escortedRoll <= 4:
@@ -1248,14 +1163,22 @@ class Game():
             for x in range(len(ship)):
                 if ship[x].type == "Escort":
                     continue
-                toPrint = (str(x) + ") " + str(ship[x]))
+                if ship[0].type == "Escort":
+                    toPrint = (str(x) + ") " + str(ship[x]))
+                else:
+                    toPrint = (str(x+1) + ") " + str(ship[x]))
                 print(toPrint)
             invalid = True
             while invalid:
                 b = int(input())
-                if b <= 0 or b > len(ship):
+                if ship[0].type == "Escort":
+                    if b <= 0 or b > len(ship):
+                        continue
+                elif b < 0 or b > len(ship):
                     continue
                 else:
+                    if ship[0].type != "Escort":
+                        b = b - 1
                     invalid = False
             newShip2 = []
             if Escorted(ship):
@@ -1364,7 +1287,6 @@ class Game():
             return "Escaped"
         if escortRoll + escortMods <= 8:
             print("We've evaded detection!")
-            self.sub.printStatus()
             time.sleep(2)
             return "Escaped"
         elif escortRoll + escortMods <= 11:
@@ -1605,7 +1527,7 @@ class Game():
 
         # show and assign weps
         if not detectedOnClose:
-            self.sub.subSupplyPrintout()
+            self.sub.subSupplyPrintout(False)
             self.getAttackType(ship, depth, timeOfDay, r)
 
         # post shot escort detection
@@ -1670,9 +1592,6 @@ class Game():
     def torpedoSalvo(self, foreOrAft, ship, depth, r):
         printTargetShipList(ship)
         both = False
-        if foreOrAft == "Both":
-            foreOrAft = "Forward"
-            both = True
 
         notFiredAtAllShips = True
         # validation loop to get a target, then # of torps to fire at it, then get next target if torpedoes are available
@@ -1682,7 +1601,7 @@ class Game():
                 break
             target = target - 1
 
-            self.sub.subSupplyPrintout(foreOrAft)
+            self.sub.subSupplyPrintout(True, foreOrAft)
             invalidFire = True
             # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
             if self.sub.getTotalInTubes(foreOrAft, "G7a") > 0:
@@ -1711,42 +1630,12 @@ class Game():
                 for x in range(G7eFire):
                     self.sub.fireTorpedo(foreOrAft, "G7e")
                     self.G7eFired += 1
-
             if foreOrAft == "Forward":
                 self.firedForward = True
-            else:
+            elif foreOrAft == "Aft":
                 self.firedAft = True
-
-            # if both, allow for firing aft as well
-            if both:
-                self.sub.subSupplyPrintout("Aft")
-                invalidFire = True
-                # if steam torpedoes are available, ask how many to fire, otherwise / then ask how many electric to fire
-                if self.sub.getTotalInTubes("Aft", "G7a") > 0:
-                    # validation loop
-                    while invalidFire:
-                        G7aFire = int(input("Fire how many G7a torpedoes?"))
-                        if G7aFire < 0 or G7aFire > self.sub.getTotalInTubes("Aft", "G7a"):
-                            continue
-                        else:
-                            invalidFire = False
-                    ship[target].fireG7a(G7aFire)
-                    for x in range(G7aFire):
-                        self.sub.fireTorpedo("Aft", "G7a")
-                        self.G7aFired += 1
-                invalidFire = True
-                if self.sub.getTotalInTubes("Aft", "G7e") > 0:
-                    # validation loop
-                    while invalidFire:
-                        G7eFire = int(input("Fire how many G7e torpedoes?"))
-                        if G7eFire < 0 or G7eFire > self.sub.getTotalInTubes("Aft", "G7e"):
-                            continue
-                        else:
-                            invalidFire = False
-                    ship[target].fireG7e(G7eFire)
-                    for x in range(G7eFire):
-                        self.sub.fireTorpedo("Aft", "G7e")
-                        self.G7eFired += 1
+            else:
+                self.firedForward = True
                 self.firedAft = True
 
             shipsFiredAtCount = 0
@@ -1781,7 +1670,8 @@ class Game():
                         rollMod += 2
                     else:
                         rollMod += 1
-                # todo add mod for second salvo IGNORED FOR KNIGHTS CROSS level 1+
+                if self.firedForward and self.firedAft and self.sub.knightsCross == 0:
+                    rollMod += 1
                 if ship[s].G7aINCOMING > 0:
                     print("Roll to hit on", ship[s].name, ": ", end="")
                     printRollandMods(torpRoll, rollMod)
@@ -1866,7 +1756,7 @@ class Game():
     def deckGunAttack(self, ship, r):
         """Attack called (already assumed to have at least one shot) for deck guns."""
         printTargetShipList(ship)
-        self.sub.subSupplyPrintout("Deck Gun")
+        self.sub.subSupplyPrintout(False, "Deck Gun")
 
         target = self.getTarget(ship)
 

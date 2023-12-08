@@ -90,7 +90,8 @@ class Ship():
                 notUniqueShip = False
             for x in range(len(shipsSunk)):
                 if shipsSunk[x].name == self.name:
-                    continue
+                    notUniqueShip = True
+                    break
                 else:
                     notUniqueShip = False
 

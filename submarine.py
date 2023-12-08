@@ -166,7 +166,7 @@ class Submarine():
         return self.subClass
 
     def getTotalInTubes(self, loc, type=""):
-        """Returns the total number of torpedoes currently loaded in tubes in a given part (forward or aft)"""
+        """Returns the total number of torpedoes currently loaded in tubes in a given part (forward, aft or both)"""
         if loc == "Forward":
             if type == "":
                 return self.forward_G7a + self.forward_G7e
@@ -181,6 +181,13 @@ class Submarine():
                 return self.aft_G7a
             else:
                 return self.aft_G7e
+        elif loc == "Both":
+            if type == "":
+                return self.forward_G7a + self.forward_G7e + self.aft_G7a + self.aft_G7e
+            elif type == "G7a":
+                return self.forward_G7a + self.aft_G7a
+            else:
+                return self.forward_G7e + self.aft_G7e
 
     def torpedoResupply(self):
         """Called for in-port resupply of torpedoes to determine how many of each torpedo is taken, and assigned where"""
@@ -254,8 +261,23 @@ class Submarine():
                     self.aft_G7a -= 1
                 else:
                     self.aft_G7e -= 1
+            case "Both":
+                if type == "G7a":
+                    if self.forward_G7a > 0:
+                        self.forward_G7a -= 1
+                    elif self.aft_G7a > 0:
+                        self.aft_G7a -= 1
+                    else:
+                        print("Error- unable to fire torpedo from a tube")
+                else:
+                    if self.forward_G7e > 0:
+                        self.forward_G7e -= 1
+                    elif self.aft_G7e > 0:
+                        self.aft_G7e -= 1
+                    else:
+                        print("Error- unable to fire torpedo from a tube!")
 
-    def subSupplyPrintout(self, specific=""):
+    def subSupplyPrintout(self, firing, specific=""):
         """Prints current ammunition loads (by default, forward, aft and deck gun ammo. Can pass Forward or Aft
         to get JUST the loadout of that part of the boat. Prints as LOADED/RELOADS for a specific type."""
         if specific == "" or specific == "Forward":
@@ -263,15 +285,26 @@ class Submarine():
                 print("Forward- G7a:", "MINES", "/", self.reloads_forward_G7a, "G7e:", "MINES", "/",
                       self.reloads_forward_G7e)
             else:
-                print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
+                if firing:
+                    print("Forward- G7a:", self.forward_G7a, "G7e:", self.forward_G7e)
+                else:
+                    print("Forward- G7a:", self.forward_G7a, "/", self.reloads_forward_G7a, "G7e:", self.forward_G7e, "/",
                       self.reloads_forward_G7e)
 
         if specific == "" or specific == "Aft":
             if self.minesLoadedAft:
                 print("Aft- G7a:", "MINES", "/", self.reloads_aft_G7a, "G7e:", "MINES", "/", self.reloads_aft_G7e)
             else:
-                print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
-                      self.reloads_aft_G7e)
+                if firing:
+                    print("Aft- G7a:", self.aft_G7a, "G7e:", self.aft_G7e)
+                else:
+                    print("Aft- G7a:", self.aft_G7a, "/", self.reloads_aft_G7a, "G7e:", self.aft_G7e, "/",
+                          self.reloads_aft_G7e)
+
+        if specific == "Both":
+            totalG7a = self.forward_G7a + self.aft_G7a
+            totalG7e = self.forward_G7e + self.aft_G7e
+            print("Total- G7a:", totalG7a, "G7e:", totalG7e)
         if specific == "" or specific == "Deck Gun":
             print("Deck Gun Ammo:", self.deck_gun_ammo, "/", self.deck_gun_cap)
 
@@ -279,7 +312,7 @@ class Submarine():
         """Reloads forward tubes (gets input based on which types are available and which to load.)"""
         #check forward tubes needing reload
         if self.getTotalInTubes("Forward") != self.forward_tubes and not self.minesLoadedForward:
-            self.subSupplyPrintout("Forward")
+            self.subSupplyPrintout(False, "Forward")
             # if there are forward steam reloads, otherwise no steam to reload
             if self.reloads_forward_G7a > 0:
                 invalid = True
@@ -310,7 +343,7 @@ class Submarine():
 
         # check aft tubes needing reload
         if self.getTotalInTubes("Aft") != self.aft_tubes and not self.minesLoadedAft:
-            self.subSupplyPrintout("Aft")
+            self.subSupplyPrintout(False, "Aft")
             # if there are forward steam reloads, otherwise no steam to reload
             if self.reloads_aft_G7a > 0:
                 invalid = True
@@ -339,7 +372,7 @@ class Submarine():
                 self.aft_G7e += f1
                 self.reloads_aft_G7e -= f1
 
-        self.subSupplyPrintout()
+        self.subSupplyPrintout(False)
 
     def crewKnockedOut(self):
         """Returns true if all 4 'regular' crewmen are SW or KIA - state 2 or 3"""
@@ -436,9 +469,9 @@ class Submarine():
                     print("Major hull damage!")
                     self.hull_Damage += 2
                 case "Flak Guns":
-                    if self.systems["3.7 Flak Gun"] >= 0:
+                    if self.systems["3.7 Flak"] >= 0:
                         print("Both flak guns have been damaged!")
-                        self.systems.update({"3.7 Flak Gun": 1})
+                        self.systems.update({"3.7 Flak": 1})
                     else:
                         print("Flak gun has been hit!")
                     self.systems.update({"Flak Gun": 1})
@@ -564,7 +597,7 @@ class Submarine():
                         toRoll = 4
                     elif key == "Hydrophones" or key == "Dive Planes" or key == "Radio" or key == "Fuel Tanks":
                         toRoll = 2
-                    elif "Gun" in key or "gun" in key:
+                    elif "Gun" in key or "gun" in key or "Flak" in key:
                         toRoll = 2
                     elif key == "Periscope" or key == "Batteries":
                         toRoll = 4
@@ -572,6 +605,7 @@ class Submarine():
                         toRoll = 2
                     else:
                         print("Error getting damaged system repair roll.")
+                        toRoll = 0
                         print(key)
 
                     if repairRoll + repairMod <= toRoll:
