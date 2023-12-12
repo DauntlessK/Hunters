@@ -15,40 +15,28 @@ def verifyYorN():
     """Input prompt for a Yes or No response. Returns 'Y' or 'N' string, otherwise loops endlessly"""
     notVerified = True
     while notVerified:
-        inp = input("1) Yes\n2) No")
+        inp = getInputNum("1) Yes\n2) No ", 1, 2)
         match inp:
-            case "1" | "Yes" | "Y" | "y" | "yes":
+            case 1:
                 return "Y"
-            case "2" | "No" | "N" | "n" | "no":
+            case 2:
                 return "N"
-            case _:
-                print("Unknown command. Try again.")
-                continue
 
 def verifyNextAction(aborting):
     """For each step of a patrol, ask for what to do next. Returns string: 'Continue', 'Supply', 'Status', 'Abort'"""
-    notVerified = True
-    while notVerified:
-        if aborting:
-            inp = input("1) Continue\n2) Stores Report\n3) Damage Report")
-        else:
-            inp = input("1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol")
-        match inp:
-            case "1" | "Continue" | "C" | "continue" | "c":
-                return "Continue"
-            case "2" | "Stores" | "S" | "stores" | "s":
-                return "Stores"
-            case "3" | "Damage" | "D" | "damage" | "d":
-                return "Damage"
-            case "4" | "Abort" | "A" | "abort" | "a":
-                if not aborting:
-                    return "Abort"
-                else:
-                    print("Unknown command. Try again.")
-                    continue
-            case _:
-                print("Unknown command. Try again.")
-                continue
+    if aborting:
+        inp = getInputNum("1) Continue\n2) Stores Report\n3) Damage Report ", 1, 3)
+    else:
+        inp = getInputNum("1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol ", 1, 4)
+    match inp:
+        case 1:
+            return "Continue"
+        case 2:
+            return "Stores"
+        case 3:
+            return "Damage"
+        case 4:
+            return "Abort"
 
 def printTargetShipList(ship):
     print("Targets:")
@@ -64,3 +52,70 @@ def printRollandMods(roll, mods):
     if mods > 0:
         toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
         print(toPrint)
+
+def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
+    invalidInput = True
+    while invalidInput:
+        print(prompt, end="")
+        inp = input()
+        try:
+            inp = int(inp)
+        except:
+            print("Invalid input. Enter a number.")
+            continue
+        if inp < minINCLUSIVE:
+            print("Must be greater than or equal to", minINCLUSIVE)
+        elif inp > maxINCLUSIVE:
+            print("Must be less than or equal to", maxINCLUSIVE)
+        else:
+            return inp
+
+
+def scuttleFromFlooding(game):
+    print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
+    scuttleRoll = d6Rollx2()
+    scuttleDRM = 0
+    if game.sub.crew_health["Kommandant"] == 2:
+        scuttleDRM += 1
+    printRollandMods(scuttleRoll, scuttleDRM)
+    if scuttleRoll + scuttleDRM <= 11:
+        print("Successfully scuttled. The U-boat slips under the waves as your crew escapes.")
+        gameover(game, "Scuttled due to flooding")
+    else:
+        print("The boat fails to go down and is successfully captured by the enemy. It's a massive failure as your crew are captured.")
+        gameover("Boat was captured after emergency surface from flooding")
+
+
+
+def scuttleFromDieselsInop(game):
+    print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
+    radioRoll = d6Rollx2()
+    radioDRM = 0
+    if game.sub.systems["Radio"] >= 2:
+        radioDRM += 4
+    printRollandMods(radioRoll, radioDRM)
+    if radioRoll + radioDRM >= 11:
+        gameover(game, "Lost at sea after scuttling the boat due to inoperative diesel engines")
+    else:
+        print("Rescused! Get new Uboat")
+        print("TODO")
+        #todo
+
+
+def gameover(game, cause):
+    print("++++++++++++++++++++++++++++")
+    print("++        GAMEOVER!       ++")
+    print("++++++++++++++++++++++++++++")
+    print("Carrer summary:")
+    print(game.rank[game.sub.crew_levels["Kommandant"]], game.kmdt)
+    if game.sub.knightsCross > 0:
+        print("Awards:", game.sub.awardName[game.sub.knightsCross])
+    print("Number of patrols:", game.patrolNum)
+    print("End date:", game.getFullDate)
+    print("Cause:", cause)
+    print("Ships sunk:", + str(len(game.shipsSunk)))
+    damageCount = 0
+    for x in range(len(game.shipsSunk)):
+        damageCount += game.shipsSunk[x].damage
+    print("Damage done:", damageCount)
+    raise SystemExit
