@@ -108,11 +108,22 @@ def gameover(game, cause):
     print("++++++++++++++++++++++++++++")
     print("Carrer summary:")
     print(game.rank[game.sub.crew_levels["Kommandant"]], game.kmdt)
+    toprint = "Commander of U-" + game.id
+    print(toprint)
+    if len(game.pastSubs) > 0:
+        toprint = "Other commands: "
+        for x in range(len(game.pastSubs)):
+            if x == len(game.pastSubs):
+                toprint = toprint + "U-" + game.pastSubs[x]
+            else:
+                toprint = toprint + "U-" + game.pastSubs[x] + ", "
+        print(toprint)
+    toprint = "Fate of U-" + game.id + ": " + cause
+    #TODO get ship that sunk it if applicable
     if game.sub.knightsCross > 0:
         print("Awards:", game.sub.awardName[game.sub.knightsCross])
     print("Number of patrols:", game.patrolNum)
     print("End date:", game.getFullDate)
-    print("Cause:", cause)
     print("Ships sunk:", + str(len(game.shipsSunk)))
     damageCount = 0
     for x in range(len(game.shipsSunk)):

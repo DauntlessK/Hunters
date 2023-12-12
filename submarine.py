@@ -283,14 +283,85 @@ class Submarine():
         """Adds X amount of torpedoes (up to the allowable amount as per the max torpedoes for the type)"""
         totalTorpedoes = self.getTotalTorpedoes()
         maxCanAdd = self.G7aStarting + self.G7eStarting - totalTorpedoes
+        actualNumToAdd = numToAdd
 
         if type == "G7a":
             totalG7a = self.getTotalTorpedoes("G7a")
-            totalG7aAllowedWithSpread = self.G7aStarting + self.torpedo_type_spread
-            #first ensure number to add is less than total torpedoes allowed
-            if numToAdd <= maxCanAdd:
-                self.
-                #TODO figure out where to put added torpedoes?
+            maxG7a = self.G7aStarting + self.torpedo_type_spread
+
+            invalid = True
+            while invalid:
+                # first ensure number to add is less than total torpedoes allowed
+                if numToAdd > maxCanAdd:
+                    numToAdd -= 1
+                    continue
+                # ensure that number of that type to add does not go over the maximum allowed amount (starting + extra based on spread)
+                if totalG7a + numToAdd > maxG7a:
+                    numToAdd -= 1
+                    continue
+                invalid = False
+            actualNumToAdd = numToAdd
+            #loop to put each torpedo in a spot- first try to put in forward tubes, then aft, then forward reloads, then aft reloads
+            for x in range (numToAdd):
+                if self.getTotalInTubes("Forward") != self.forward_tubes:
+                    self.forward_G7a += 1
+                    numToAdd -= 1
+                    continue
+                elif self.getTotalInTubes("Aft") != self.aft_tubes:
+                    self.aft_G7a += 1
+                    numToAdd -= 1
+                    continue
+                elif self.reloads_forward_G7a + self.reloads_forward_G7e != self.G7aStarting + self.G7eStarting - self.forward_tubes - self.aft_tubes - self.reserves_aft:
+                    self.reloads_forward_G7a += 1
+                    numToAdd -= 1
+                    continue
+                elif self.reloads_aft_G7a + self.reloads_aft_G7e != self.reserves_aft:
+                    self.reloads_aft_G7a += 1
+                    numToAdd -= 1
+                    continue
+                else:
+                    print("Error finding spot to place steam torpedo")
+
+            return actualNumToAdd
+
+        elif type == "G7e":
+            totalG7e = self.getTotalTorpedoes("G7e")
+            maxG7e = self.G7eStarting + self.torpedo_type_spread
+
+            invalid = True
+            while invalid:
+                # first ensure number to add is less than total torpedoes allowed
+                if numToAdd > maxCanAdd:
+                    numToAdd -= 1
+                    continue
+                # ensure that number of that type to add does not go over the maximum allowed amount (starting + extra based on spread)
+                if totalG7e + numToAdd > maxG7e:
+                    numToAdd -= 1
+                    continue
+                invalid = False
+            actualNumToAdd = numToAdd
+            # loop to put each torpedo in a spot- first try to put in forward tubes, then aft, then forward reloads, then aft reloads
+            for x in range(numToAdd):
+                if self.getTotalInTubes("Forward") != self.forward_tubes:
+                    self.forward_G7e += 1
+                    numToAdd -= 1
+                    continue
+                elif self.getTotalInTubes("Aft") != self.aft_tubes:
+                    self.aft_G7e += 1
+                    numToAdd -= 1
+                    continue
+                elif self.reloads_forward_G7a + self.reloads_forward_G7e != self.G7aStarting + self.G7eStarting - self.forward_tubes - self.aft_tubes - self.reserves_aft:
+                    self.reloads_forward_G7e += 1
+                    numToAdd -= 1
+                    continue
+                elif self.reloads_aft_G7a + self.reloads_aft_G7e != self.reserves_aft:
+                    self.reloads_aft_G7e += 1
+                    numToAdd -= 1
+                    continue
+                else:
+                    print("Error finding spot to place electric torpedo")
+
+            return actualNumToAdd
 
 
     def fireTorpedo(self, forwardOrAft, type):
@@ -426,22 +497,23 @@ class Submarine():
         else:
             return False
 
-    def diveToTestDepth(self, game):
+    def diveToTestDepth(self, game, escortName):
         """Performs the dive to test depth. Giving 1 damage then checking to see if further damage is incurred. Can
         recrusively call itself if damage continues."""
         self.hull_Damage = self.hull_Damage + 1
         crushdamage = d6Rollx2()
         print("Depth damage roll: ", crushdamage)
         if crushdamage < self.hull_Damage:
-            print("The hull creaks until... CRUSH")
-            gameover(game, "The boat dove too deep and was crushed by the pressure")
+            print("The hull creaks until...")
+            gameoverText = "Crushed by pressure escaping depth charges from " + escortName
+            gameover(game, gameoverText)
         elif crushdamage == self.hull_Damage:
             print("The hull strains under the pressure. Taking additional damage...")
-            self.diveToTestDepth(game)
+            self.diveToTestDepth(game, escortName)
         else:
             print("The U-boat takes the pressure of the depths admirably.")
 
-    def attacked(self, game, attackDepth, mod, year, airAttack=False):
+    def attacked(self, game, attackDepth, mod, year, attackerName, airAttack=False):
         """When rolling against chart E3- when the sub takes damage. By default, escort attack only but can pass
         True as third value for an air attack. Mod (second param) is 1 when 12+ is rolled on detection."""
         attackRoll = d6Rollx2()
@@ -485,7 +557,10 @@ class Submarine():
                 self.damage(game, 5)
             case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
                 print("Too much damage sir!! We're done for!")
-                gameover(game, "Sub was obliterated by too much damage")
+                if airAttack:
+                    gameover(game, "Sunk by catostrophic hull damage from a", attackerName)
+                else:
+                    gameover(game, "Sunk by catostrophic hull damage done by depth charges from the", attackerName)
 
     def damage(self, game, numOfHits):
         """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
@@ -551,7 +626,7 @@ class Submarine():
 
         # check to see if sunk from hull damage
         if self.hull_Damage >= self.hull_hp:
-            print("The hull sustains too much damage and the ship breaks apart under the damage, sinking.")
+            print("The hull continues to groan and buckle until...")
             gameover(game, "The sub's hull took too much damage")
         if self.flooding_Damage >= self.flooding_hp:
             print("The ship takes on too much water, forcing you to blow the ballast tanks and surface.")
@@ -689,6 +764,10 @@ class Submarine():
         if systemDamagedCount >= 3:
             print("Additional month of refit for systems repairs.")
             refitTime += 1
+
+        #if 5 months to refit, set to 0 and assign new boat
+        if refitTime == 5:
+            refitTime = 0
 
         self.crewHeal(refitTime)
 
