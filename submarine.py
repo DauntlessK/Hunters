@@ -280,8 +280,17 @@ class Submarine():
             return self.forward_G7e + self.aft_G7e + self.reloads_forward_G7e + self.reloads_aft_G7e
 
     def addTorpedoes(type, numToAdd):
+        """Adds X amount of torpedoes (up to the allowable amount as per the max torpedoes for the type)"""
+        totalTorpedoes = self.getTotalTorpedoes()
+        maxCanAdd = self.G7aStarting + self.G7eStarting - totalTorpedoes
+
         if type == "G7a":
-            if getTotalTorpedoes("G7a") + numToAdd <= self.G7aStarting:
+            totalG7a = self.getTotalTorpedoes("G7a")
+            totalG7aAllowedWithSpread = self.G7aStarting + self.torpedo_type_spread
+            #first ensure number to add is less than total torpedoes allowed
+            if numToAdd <= maxCanAdd:
+                self.
+                #TODO figure out where to put added torpedoes?
 
 
     def fireTorpedo(self, forwardOrAft, type):
