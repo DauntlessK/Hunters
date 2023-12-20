@@ -1,14 +1,24 @@
 import random
 
-def d6Roll():
+def d6Roll(game, doubleRoll = False):
     """Rolls 1 die."""
     roll = random.randint(1, 6)
+    if game.halsUndBeinbruch > 0 and not doubleRoll:
+        print("Roll:", roll, " - Spend reroll?")
+        if verifyYorN() == "Y":
+            roll = random.randint(1, 6)
+            game.halsUndBeinbruch -= 1
     return roll
 
 
-def d6Rollx2():
+def d6Rollx2(game):
     """Rolls 2 dice."""
-    roll = d6Roll() + d6Roll()
+    roll = d6Roll(game, True) + d6Roll(game, True)
+    if game.halsUndBeinbruch > 0:
+        print("Roll:", roll, " - Spend reroll?")
+        if verifyYorN() == "Y":
+            roll = d6Roll(game, True) + d6Roll(game, True)
+            game.halsUndBeinbruch -= 1
     return roll
 
 def verifyYorN():
@@ -73,7 +83,7 @@ def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
 
 def scuttleFromFlooding(game):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
-    scuttleRoll = d6Rollx2()
+    scuttleRoll = d6Rollx2(game)
     scuttleDRM = 0
     if game.sub.crew_health["Kommandant"] == 2:
         scuttleDRM += 1
@@ -89,7 +99,7 @@ def scuttleFromFlooding(game):
 
 def scuttleFromDieselsInop(game):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
-    radioRoll = d6Rollx2()
+    radioRoll = d6Rollx2(game)
     radioDRM = 0
     if game.sub.systems["Radio"] >= 2:
         radioDRM += 4
