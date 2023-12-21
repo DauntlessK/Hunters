@@ -501,7 +501,7 @@ class Submarine():
         """Performs the dive to test depth. Giving 1 damage then checking to see if further damage is incurred. Can
         recrusively call itself if damage continues."""
         self.hull_Damage = self.hull_Damage + 1
-        crushdamage = d6Rollx2()
+        crushdamage = d6Rollx2(game)
         print("Depth damage roll: ", crushdamage)
         if crushdamage < self.hull_Damage:
             print("The hull creaks until...")
@@ -516,7 +516,7 @@ class Submarine():
     def attacked(self, game, attackDepth, mod, year, attackerName, airAttack=False):
         """When rolling against chart E3- when the sub takes damage. By default, escort attack only but can pass
         True as third value for an air attack. Mod (second param) is 1 when 12+ is rolled on detection."""
-        attackRoll = d6Rollx2()
+        attackRoll = d6Rollx2(game)
         attackMods = 0
         if self.systems["Fuel Tanks"] >= 1:
             attackMods += 1
@@ -611,7 +611,7 @@ class Submarine():
         time.sleep(3)
         # check if flooding took place this round and roll for additional flooding chance
         if tookFloodingThisRound:
-            addlFlooding = d6Roll()
+            addlFlooding = d6Roll(game)
             floodingMods = 0
             if self.crew_health["Engineer"] >= 2:
                 floodingMods += 1
@@ -700,7 +700,7 @@ class Submarine():
     def pumps(self):
         self.flooding_Damage = 0
 
-    def repair(self):
+    def repair(self, game):
 
         damagedTotal = countOf(self.systems.values(), 1)
         count = 0
@@ -712,7 +712,7 @@ class Submarine():
         if damagedTotal > 0:
             for key in self.systems:
                 if self.systems[key] == 1:
-                    repairRoll = d6Roll()
+                    repairRoll = d6Roll(game)
                     repairMod = 0
                     if self.crew_health["Engineer"] <= 1 and self.crew_levels["Engineer"] > 0:
                         repairMod -= 1
@@ -744,7 +744,7 @@ class Submarine():
 
         self.printStatus()
 
-    def refit(self):
+    def refit(self, game):
         """In port repair - systems and hull as well as healing crew and replacing any as necessary"""
         refitTime = 1   #default refit time in months
 
@@ -776,18 +776,18 @@ class Submarine():
         if refitTime == 5:
             refitTime = 0
 
-        self.crewHeal(refitTime)
+        self.crewHeal(game, refitTime)
 
         return refitTime
 
-    def crewHeal(self, refitTime):
+    def crewHeal(self, game, refitTime):
         """Goes through all crew members that are SW and KIA and replaces them as needed, otherwise heals the crew"""
         #TODO deal with long term injuries to KMDT
         crewReplacedCount = 0
         for key in self.crew_health:
             #check for seriously wounded members first and determine if they need to be replaced or will heal in time for next patrol
             if self.crew_health[key] == 2:
-                monthsToHeal = d6Roll()
+                monthsToHeal = d6Roll(game)
                 if self.crew_levels["Doctor"] == 1 and self.crew_health["Doctor"] <= 1:
                     monthsToHeal -= 1
                 if monthsToHeal > refitTime:
@@ -809,10 +809,18 @@ class Submarine():
             if self.crew_levels["Crew"] < 1:
                 self.crew_levels = 1
 
+
     def crewInjury(self, game, attacker, airAttack = False):
+        print("fix")
+
+    def crewInjury(self, game, cm = False):
         #todo probably need to rethink how injuries are stored
-        crewInjuryRoll = d6Rollx2()
-        severity = d6Roll()
+        if cm:
+            crewInjuryRoll = 7
+            severity = 1
+        else:
+            crewInjuryRoll = d6Rollx2(game)
+            severity = d6Roll(game)
         if self.crew_health["Doctor"] <= 1 and self.crew_levels["Doctor"] > 0:
             severity -= 1
         if severity <= 3:
