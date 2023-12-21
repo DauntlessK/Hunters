@@ -667,3 +667,34 @@ HMS Wrestler#W (Admiralty)-class Destroyer#1100
 HMS Wryneck#W (Admiralty)-class Destroyer#1100
 USS Zane#Clemson-class Destroyer minesweeper#1215
 HMS Zulu#Tribal-class Destroyer#1891
+USS Worden#Farragut-class Destroyer#1365
+USS Winslow#Porter-class Destroyer#1850
+USS Wilkes#Gleaves-class Destroyer#1630
+USS William B. Preston#Clemson-class Destroyer#1215
+USS Williamson#Clemson-class Destroyer#1215
+USS Wilson#Benham-class Destroyer#1656
+USS Whipple#Clemson-class Destroyer#1215
+USS Gherardi#Gleaves-class Destroyer#1630
+USS Gillespie#Benson-class Destroyer#1620
+USS Gillis#Clemson-class Destroyer#1215
+USS Gilmer#Clemson-class Destroyer#1215
+USS Alden#Clemson-class Destroyer#1215
+USS Allen#Sampson-class Destroyer#1111
+USS Aulick#Fletcher-class Destroyer#2050
+USS Aylwin#Farragut-class Destroyer#1365
+USS Babbitt#Wickes-class Destroyer#1190
+USS Badger#Wickes-class Destroyer#1190
+USS Bagley#Bagley-class Destroyer#1500
+USS Bailey#Benson-class Destroyer#1620
+USS Ellis#Wickes-class Destroyer#1190
+USS Ellyson#Gleaves-class Destroyer#1630
+USS Lardner#Gleaves-class Destroyer#1630
+USS Laub#Benson-class Destroyer#1620
+USS Lawrence#Clemson-class Destroyer#1190
+USS Lea#Wickes-class Destroyer#1190
+USS Fletcher#Fletcher-class Destroyer#2050
+USS Flusser#Mahan-class Destroyer#1450
+USS Foote#Fletcher-class Destroyer#2050
+USS Selfridge#Porter-class Destroyer#1850
+USS Rodman#Gleaves-class Destroyer#1630
+USS Roe#Sims-class Destroyer#1570

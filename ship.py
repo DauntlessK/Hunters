@@ -33,7 +33,7 @@ class Ship():
                     self.clss = type
                     with open("Small Freighter.txt", "r") as fp:
                         lines = fp.readlines()
-                        if loc == "North America":
+                        if "North America" in loc or "Caribbean" in loc:
                             entry = lines[random.randint(101, 120)]
                         else:
                             entry = lines[random.randint(1, 100)]
@@ -44,7 +44,7 @@ class Ship():
                 case "Large Freighter" | "Tanker":
                     with open(f"{type}.txt", "r") as fp:
                         lines = fp.readlines()
-                        if loc == "North America":
+                        if "North America" in loc or "Caribbean" in loc:
                             entry = lines[
                                 random.randint(101, 120)]
                         else:
@@ -64,7 +64,12 @@ class Ship():
                 case "Escort":
                     with open("Escort.txt", "r") as fp:
                         lines = fp.readlines()
-                        entry = lines[random.randint(1, 669)]
+                        if "North America" in loc or "Caribbean" in loc:
+                            entry = lines[
+                                random.randint(670, 700)]
+                        else:
+                            entry = lines[
+                                random.randint(1, 669)]
                         entry = entry.split("#")
                         self.name = entry[0]
                         self.clss = entry[1]

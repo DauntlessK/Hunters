@@ -14,4 +14,4 @@ class Aircraft():
             self.type = self.type.strip(('\n'))
 
     def getType(self):
-        return type
+        return self.type

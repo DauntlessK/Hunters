@@ -5,6 +5,7 @@ import time
 from operator import *
 from ship import *
 from submarine import *
+from aircraft import *
 from util import *
 
 #TODO:
@@ -18,6 +19,8 @@ from util import *
 
 #BUGS SEEN----
 #following damaged ship went straight to next box prompt
+#mission loop (deploying mines)
+#did not deploy aft mines
 
 class Game():
 
@@ -46,6 +49,7 @@ class Game():
         self.successfulPatrols = 0
         self.unsuccessfulPatrols = 0
         self.unsuccessfulPatrolsInARow = 0
+        self.eligibleForNewUboat = False
         self.lastPatrolWasUnsuccessful = False
         self.randomEvent = False
         self.abortingPatrol = False
@@ -189,7 +193,11 @@ class Game():
         print("4. IXB (Start date Apr-40)")
         print("5. VIIC (Start date Oct-40)")
         print("6. VIID (Start date Jan-42)")
-        subChosen = getInputNum("Choose a U-Boat: ", 1, 6)
+        print("7. Random U-Boat")
+        subChosen = getInputNum("Choose a U-Boat: ", 1, 7)
+        if subChosen == 7:
+            subChosen = random.randint(1,6)
+            #todo get random appropriate Uboat #?
         match subChosen:
             case 1:
                 self.date_month = 8
@@ -217,7 +225,7 @@ class Game():
                 self.date_year = 1942
                 self.francePost = True
                 return "VIID"
-            case 7:
+            case 8:
                 self.date_month = 4
                 self.date_year = 1943
                 self.francePost = True
@@ -266,15 +274,11 @@ class Game():
                     if x not in uniqueOrders:
                         uniqueOrders.append(x)
                 for x in range(len(uniqueOrders)):
-                    if x == len(uniqueOrders):
-                        print(uniqueOrders[x])
-                    else:
-                        print(uniqueOrders[x], end=", ")
-
-                inp = "None"
-                while inp not in uniqueOrders:
-                    inp = input("Pick your orders (Case-sensitive): ")
-                orders = inp
+                    count = x + 1
+                    tp = str(count) + ") " + uniqueOrders[x]
+                    print(tp)
+                inpNum = getInputNum("Pick your orders (Case-sensitive): ", 1, len(uniqueOrders))
+                orders = uniqueOrders[inpNum - 1]
             else:
                 orders = lines[ordersRoll - 2]
 
@@ -322,7 +326,17 @@ class Game():
                     newp = self.currentOrders.replace("(Abwehr Agent Delivery)", "")
                 elif "Minelaying" in self.currentOrders:
                     newp = self.currentOrders.replace("(Minelaying)", "")
+                elif "Wolfpack" in self.currentOrders:
+                    newp = self.currentOrders.replace("(Wolfpack)", "")
                 self.patrolArray.append(newp)
+
+        #remove one NA/Caribbean patrol if applicable
+        if "Caribbean" in self.currentOrders or "North America" in self.currentOrders:
+            try:
+                self.patrolArray.remove("North America")
+                self.patrolArray.remove("Caribbean")
+            except:
+                pass
 
         print(self.patrolArray)
 
@@ -333,7 +347,7 @@ class Game():
         if (orders == "West African Coast" or orders == "Caribbean") and ("VII" in self.sub.getType()):  # VII Cannot patrol west africa
             orders = "Atlantic"
         if orders == "British Isles" and self.sub.getType() == "VIID":
-            orders = "British Isles (Minelaying)"
+            orders = "British Isles(Minelaying)"
 
         # deal with permanent stations
         if self.permMedPost:
@@ -417,25 +431,28 @@ class Game():
         # while current step is less than the full patrol length (station patrol + transit boxes)
         #LOOP TO RUN THROUGH PATROL ARRAY (each patrol box)
         x = 0
-        while x <= (len(self.patrolArray)):
+        patrolLength = len(self.patrolArray) - 1
+        while x <= patrolLength:
 
             if x == 0: #skip first entry in patrol array which is port
+                x += 1
                 continue
             if self.abortingPatrol and x < len(self.patrolArray) - 2:
+                x += 1
                 continue
 
             #if doctor is SW or KIA, see if any other injured crew members die (each patrol box, before encounter)
-            if self.sub.crew_health("Doctor") >= 2:
+            if self.sub.crew_health["Doctor"] >= 2:
                 # check if any hurt crewmen
                 swCrew = countOf(self.sub.crew_health.values(), 2)
                 count = 0
                 if swCrew > 0:
-                    for key in self.crew_health:
-                        if self.crew_health[key] == 2:
+                    for key in self.sub.crew_health:
+                        if self.sub.crew_health[key] == 2:
                             survivalRoll = d6Roll()
                             if survivalRoll >= 4:
                                 print(key, "has died of his wounds.")
-                                self.crew_health[key] = 3
+                                self.sub.crew_health[key] = 3
 
             currentBoxName = self.patrolArray[x]
 
@@ -866,6 +883,8 @@ class Game():
                     loc = "Bay of Biscay"
                     resupply = True
                     resupplyNotInterrupted = True
+                else:
+                    resupply = False
                 rollDRM = 0
                 if year == 1942 and loc == "Bay of Biscay":
                     rollDRM -= 1
@@ -1036,7 +1055,7 @@ class Game():
             aircraft = Aircraft()
             aircraftT = aircraft.getType()
             print("ALARM! Aircraft in sight! Looks like it's a", aircraftT)
-            print("Rolling to crash dive!")
+            #print("Rolling to crash dive!")
         else:
             print(aircrafT, "is making another attack run!")
 
@@ -1086,12 +1105,12 @@ class Game():
                     flakMods -= 2
                 if flakRoll + flakMods <= 3:
                     print("We shot down aircraft!")
-                    self.sub.crewInjury(self)
+                    self.sub.crewInjury(self, aircraftT, True)
                     self.sub.attacked(self, "Surfaced", 0, self.getYear(), aircraftT, True)
                     aircraft = "Destroyed"
                 else:
                     print("We've managed to damage the aircraft!")
-                    self.sub.crewInjury(self)
+                    self.sub.crewInjury(self, aircraftT, True)
                     self.sub.attacked(self, "Surfaced", 0, self.getYear(), aircraftT, True)
                     if a1AircraftEncounterRoll <= 1:
                         self.sub.attacked(self, "Surfaced", 0, self.getYear(), aircraftT, True)

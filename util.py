@@ -71,7 +71,7 @@ def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
             return inp
 
 
-def scuttleFromFlooding(game):
+def scuttleFromFlooding(game, attacker, airAttack):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
     scuttleRoll = d6Rollx2()
     scuttleDRM = 0
@@ -79,11 +79,22 @@ def scuttleFromFlooding(game):
         scuttleDRM += 1
     printRollandMods(scuttleRoll, scuttleDRM)
     if scuttleRoll + scuttleDRM <= 11:
-        print("Successfully scuttled. The U-boat slips under the waves as your crew escapes.")
-        gameover(game, "Scuttled due to flooding")
+        if airAttack:
+            print("Successfully scuttled. The U-boat slips under the waves.")
+            causeText = "Scuttled " + game.getFullDate() + " due to flooding after an attack by a" + attacker
+            gameover(game, causeText)
+        else:
+            print("Successfully scuttled. The U-boat slips under the waves as your crew is captured.")
+            causeText = "Scuttled " + game.getFullDate() + " due to flooding after depth charges from the " + attacker
+            gameover(game, causeText)
     else:
         print("The boat fails to go down and is successfully captured by the enemy. It's a massive failure as your crew are captured.")
-        gameover("Boat was captured after emergency surface from flooding")
+        if airAttack:
+            causeText = "Captured " + game.getFullDate() + " after an attack by a " + attacker
+            gameover(game, causeText)
+        else:
+            causeText = "Captured " + game.getFullDate() + " after depth charge attack from the " + attacker
+            gameover(game, causeText)
 
 
 
@@ -95,7 +106,8 @@ def scuttleFromDieselsInop(game):
         radioDRM += 4
     printRollandMods(radioRoll, radioDRM)
     if radioRoll + radioDRM >= 11:
-        gameover(game, "Lost at sea after scuttling the boat due to inoperative diesel engines")
+        causeText = "Lost at sea", game.getFullDate(), "after scuttling the boat due to inoperative diesel engines"
+        gameover(game, causeText)
     else:
         print("Rescused! Get new Uboat")
         print("TODO")
@@ -106,27 +118,131 @@ def gameover(game, cause):
     print("++++++++++++++++++++++++++++")
     print("++        GAMEOVER!       ++")
     print("++++++++++++++++++++++++++++")
-    print("Carrer summary:")
-    print(game.rank[game.sub.crew_levels["Kommandant"]], game.kmdt)
-    toprint = "Commander of U-" + game.id
+    print("Carrer summary of ", end = "")
+    print(game.rank[game.sub.crew_levels["Kommandant"]], game.kmdt, end = "")
+    toprint = ", Commander of U-" + str(game.id)
     print(toprint)
     if len(game.pastSubs) > 0:
         toprint = "Other commands: "
         for x in range(len(game.pastSubs)):
             if x == len(game.pastSubs):
-                toprint = toprint + "U-" + game.pastSubs[x]
+                toprint = toprint + "U-" + str(game.pastSubs[x])
             else:
-                toprint = toprint + "U-" + game.pastSubs[x] + ", "
+                toprint = toprint + "U-" + str(game.pastSubs[x]) + ", "
         print(toprint)
-    toprint = "Fate of U-" + game.id + ": " + cause
-    #TODO get ship that sunk it if applicable
+
+    #determine where in the patrol and what the orders were when game was ended
+    adjustedOrders = game.currentOrders
+    adjustedOrders = adjustedOrders.strip('(Minelaying)')
+    adjustedOrders = adjustedOrders.strip('(Wolfpack)')
+    adjustedOrders = adjustedOrders.strip('(Abwehr Agent Delivery)')
+    if cause == "Survived - promoted to desk job":
+        toprint = "Promoted to a desk job in Training Command"
+    elif "KIA" in cause:
+        toprint = cause
+    else:
+        whilePatrolling = "x"
+        match game.patrolArray[game.currentBox]:
+            case "British Isles":
+                whilePatrolling = " while patrolling the British Isles "
+            case "West African Coast" | "Spanish Coast":
+                whilePatrolling = " while patrolling off the " + game.patrolArray[game.currentBox]
+            case "Norway":
+                whilePatrolling = " while patrolling off " + game.patrolArray[game.currentBox]
+            case "Atlantic":
+                whilePatrolling = " while patrolling the mid-" + game.patrolArray[game.currentBox]
+            case "Mediterranean" | "Arctic" | "Caribbean":
+                whilePatrolling = " while patrolling the " + game.patrolArray[game.currentBox]
+            case "North America":
+                whilePatrolling = " while patrolling the " + game.patrolArray[game.currentBox] + "n station"
+            case "Transit":
+                #determine if on the way to or from patrol
+                if game.currentBox <= 4:   #if on the way to patrol
+                    match adjustedOrders:
+                        case "British Isles" | "Atlantic" | "Mediterranean" | "Arctic" | "Caribbean" | "West African Coast" | "Spanish Coast":
+                            whilePatrolling = " while on the way to patrol the " + adjustedOrders
+                        case "Norway":
+                            whilePatrolling = " while on the way to patrol off " + adjustedOrders
+                        case "North America":
+                            whilePatrolling = " while on the way to patrol the " + adjustedOrders + "n station"
+                else:
+                    match adjustedOrders:
+                        case "British Isles" | "Atlantic" | "Mediterranean" | "Arctic" | "Caribbean" | "West African Coast" | "Spanish Coast":
+                            whilePatrolling = " while returning from a patrol of the " + adjustedOrders
+                        case "Norway":
+                            whilePatrolling = " while returning from a patrol off " + adjustedOrders
+                        case "North America":
+                            whilePatrolling = " while returning from a patrol on the " + adjustedOrders + "n station"
+            case "Bay of Biscay":
+                # determine if on the way to or from patrol
+                if game.currentBox <= 4:  # if on the way to patrol
+                    match adjustedOrders:
+                        case "British Isles" | "Atlantic" | "Mediterranean" | "Arctic" | "Caribbean" | "West African Coast" | "Spanish Coast":
+                            whilePatrolling = " crossing the Bay of Biscay to patrol the " + adjustedOrders
+                        case "Norway":
+                            whilePatrolling = " crossing the Bay of Biscay to patrol off " + adjustedOrders
+                        case "North America":
+                            whilePatrolling = " crossing the Bay of Biscay to patrol the " + adjustedOrders + "n station"
+                else:
+                    match adjustedOrders:
+                        case "British Isles" | "Atlantic" | "Mediterranean" | "Arctic" | "Caribbean" | "West African Coast" | "Spanish Coast":
+                            whilePatrolling = " while crossing the Bay of Biscay returning from a patrol of the " + adjustedOrders
+                        case "Norway":
+                            whilePatrolling = " while crossing the Bay of Biscay returning from a patrol off " + adjustedOrders
+                        case "North America":
+                            whilePatrolling = " while crossing the Bay of Biscay returning from a patrol on the " + adjustedOrders + "n station"
+            case "Mission":
+                match game.currentOrders:
+                    case "British Isles(Minelaying)":
+                        whilePatrolling = " while conducting a minelaying mission off the " + adjustedOrders
+                    case "British Isles(Abwehr Agent Delivery)":
+                        whilePatrolling = " while attempting to land an agent off the " + adjustedOrders
+                    case "North America(Abwehr Agent Delivery)":
+                        whilePatrolling = " while attempting to land an agent off the " + adjustedOrders + "n coast"
+
+        toprint = "Fate of U-" + str(game.id) + ": " + cause + whilePatrolling
+
+    print(toprint)
+
     if game.sub.knightsCross > 0:
         print("Awards:", game.sub.awardName[game.sub.knightsCross])
-    print("Number of patrols:", game.patrolNum)
-    print("End date:", game.getFullDate)
-    print("Ships sunk:", + str(len(game.shipsSunk)))
+    print("Patrols completed:", str(game.patrolNum - 1))
+    #print("End date:", game.getFullDate)
+    print("Ships sunk:", str(len(game.shipsSunk)))
+    grtSunk = 0
     damageCount = 0
-    for x in range(len(game.shipsSunk)):
+    for x in range (len(game.shipsSunk)):
+        grtSunk += game.shipsSunk[x].GRT
         damageCount += game.shipsSunk[x].damage
-    print("Damage done:", damageCount)
+    print("GRT sunk:", str(grtSunk))
+    print("Damage done:", str(damageCount))
+    print("Result: ", end="")
+    if "Captured" in cause:
+        print("DEFEAT!")
+        print("You are a disgrace to the Kriegsmarine, your family, and yourself. Consider a career after the war on land.\nYour U-Boat was captured and you have delivered a working Enigma code machine and other secrets into\nAllied hands, possibly sabotaging the entire U-Boat campaign.")
+    elif grtSunk < 50000:
+        print("DEFEAT")
+        print("You are a disgrace to the Kriegsmarine, your family, and yourself. Consider a career after the war on land.")
+    elif grtSunk < 100000:
+        print("DRAW")
+        print("You have fulfilled your obligations to the nation. Book and movie offers after the war are probably not in the cards, however.")
+    elif grtSunk < 150000:
+        print("MARGINAL VICTORY")
+        if "Survived" in cause:
+            print("You have enjoyed a modicum of success as a U-Boat commander. Your crew respects your abilities, and Oberkommando der Marine places you in Training Command.")
+        else:
+            print("You have enjoyed a modicum of success as a U-Boat commander. Had you survived, Oberkommando der Marine would have placed you in Training Command.")
+    elif grtSunk < 200000:
+        print("SUBSTANTIAL VICTORY")
+        if "Survived" in cause:
+            print("You are one of the Kriegsmarine’s top U-Boat elite, and have gained the respect of your peers, your crew, and commanders. You are often mentioned in the nation’s papers and are offered command of a flotilla.")
+        else:
+            print("You were one of the Kriegsmarine’s top U-Boat elite, and had gained the respect of your peers, your crew, and commanders. Had you survived, you would have been offered command of a flotilla.")
+    else:
+        print("DECISIVE VICTORY")
+        if "Survived" in cause:
+            print("You are the scourge of the seas and the pride of the entire Kriegsmarine. Your legendary exploits place you at the top of the U-Boat elite and are mentioned prominently in propaganda efforts. Your peers are amazed at your bold successes. You hopefully retire peacefully in what’s left of Hamburg after the war.")
+        else:
+            print("You were the scourge of the seas and the pride of the entire Kriegsmarine. Your legendary exploits place you at the top of the U-Boat elite and are mentioned prominently in propaganda efforts.")
+
     raise SystemExit

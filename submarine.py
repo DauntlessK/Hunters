@@ -505,7 +505,7 @@ class Submarine():
         print("Depth damage roll: ", crushdamage)
         if crushdamage < self.hull_Damage:
             print("The hull creaks until...")
-            gameoverText = "Crushed by pressure escaping depth charges from " + escortName
+            gameoverText = "Crushed by the depths", game.getFullDate(), "escaping depth charges from " + escortName
             gameover(game, gameoverText)
         elif crushdamage == self.hull_Damage:
             print("The hull strains under the pressure. Taking additional damage...")
@@ -542,27 +542,29 @@ class Submarine():
                 print("Their depth charges were ineffective!")
             case 4 | 5 | 6:
                 print("1 hit on the sub!")
-                self.damage(game, 1)
+                self.damage(game, 1, attackerName, airAttack)
             case 7 | 8:
                 print("2 hits on the sub!")
-                self.damage(game, 2)
+                self.damage(game, 2, attackerName, airAttack)
             case 9 | 10:
                 print("3 hits on the sub!")
-                self.damage(game, 3)
+                self.damage(game, 3, attackerName, airAttack)
             case 11:
                 print("4 hits on the sub!")
-                self.damage(game, 4)
+                self.damage(game, 4, attackerName, airAttack)
             case 12:
                 print("5 hits on the sub!!")
-                self.damage(game, 5)
+                self.damage(game, 5, attackerName, airAttack)
             case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
                 print("Too much damage sir!! We're done for!")
                 if airAttack:
-                    gameover(game, "Sunk by catostrophic hull damage from a", attackerName)
+                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic hull damage from a " + attackerName
+                    gameover(game, gameOverText)
                 else:
-                    gameover(game, "Sunk by catostrophic hull damage done by depth charges from the", attackerName)
+                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic hull damage done by depth charges from the " + attackerName
+                    gameover(game, gameOverText)
 
-    def damage(self, game, numOfHits):
+    def damage(self, game, numOfHits, attacker, airAttack = False):
         """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
         for being sunk etc."""
         tookFloodingThisRound = False
@@ -570,10 +572,10 @@ class Submarine():
             damage = self.damageChart[random.randint(0, 35)]
             match damage:
                 case "crew injury":
-                    self.crewInjury(game)
+                    self.crewInjury(game, attacker, airAttack)
                 case "crew injuryx2":
-                    self.crewInjury(game)
-                    self.crewInjury(game)
+                    self.crewInjury(game, attacker, airAttack)
+                    self.crewInjury(game, attacker, airAttack)
                 case "flooding":
                     print("Flooding!")
                     self.flooding_Damage += 1
@@ -627,10 +629,15 @@ class Submarine():
         # check to see if sunk from hull damage
         if self.hull_Damage >= self.hull_hp:
             print("The hull continues to groan and buckle until...")
-            gameover(game, "The sub's hull took too much damage")
+            if not airAttack:
+                causeText =  "Sunk " + game.getFullDate() + " - Hull destroyed by depth charges by the " + attacker
+                gameover(game, causeText)
+            else:
+                causeText = "Sunk " + game.getFullDate() + " - Hull destroyed by attack by a " + attacker
+                gameover(game, causeText)
         if self.flooding_Damage >= self.flooding_hp:
-            print("The ship takes on too much water, forcing you to blow the ballast tanks and surface.")
-            scuttleFromFlooding(game)
+            print("The ship is taking on too much water, we must blow the ballast tanks and surface.")
+            scuttleFromFlooding(game, attacker, airAttack)
 
     def dieselsInop(self):
         """Returns int of how many inoperative diesel engines"""
@@ -802,7 +809,7 @@ class Submarine():
             if self.crew_levels["Crew"] < 1:
                 self.crew_levels = 1
 
-    def crewInjury(self, game):
+    def crewInjury(self, game, attacker, airAttack = False):
         #todo probably need to rethink how injuries are stored
         crewInjuryRoll = d6Rollx2()
         severity = d6Roll()
@@ -822,8 +829,12 @@ class Submarine():
                 toprint = "Kmdt has been " + sevText
                 print(toprint)
                 self.crew_health["Kommandant"] += wounds
-                if self.crew_health["Kommandant"] == 4:
-                    gameover(game, "Kommandant has been KIA")
+                if self.crew_health["Kommandant"] == 3:
+                    if airAttack:
+                        causeText = "Kommandant KIA " + game.getFullDate() + " from an attack by a " + attacker
+                    else:
+                        causeText = "Kommandant KIA " + game.getFullDate() + " from depth charges from the " + attacker
+                    gameover(game, causeText)
             case 3:
                 toprint = "1st Officer has been " + sevText
                 print(toprint)
