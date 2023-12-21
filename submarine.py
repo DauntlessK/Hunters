@@ -501,11 +501,11 @@ class Submarine():
         """Performs the dive to test depth. Giving 1 damage then checking to see if further damage is incurred. Can
         recrusively call itself if damage continues."""
         self.hull_Damage = self.hull_Damage + 1
-        crushdamage = d6Rollx2(game)
+        crushdamage = d6Rollx2()
         print("Depth damage roll: ", crushdamage)
         if crushdamage < self.hull_Damage:
-            print("The hull creaks until...")
-            gameoverText = "Crushed by the depths", game.getFullDate(), "escaping depth charges from " + escortName
+            print("The hull creaks as the boat dives further until...")
+            gameoverText = "Crushed by the depths " + game.getFullDate() + " escaping depth charges from " + escortName
             gameover(game, gameoverText)
         elif crushdamage == self.hull_Damage:
             print("The hull strains under the pressure. Taking additional damage...")
@@ -516,7 +516,7 @@ class Submarine():
     def attacked(self, game, attackDepth, mod, year, attackerName, airAttack=False):
         """When rolling against chart E3- when the sub takes damage. By default, escort attack only but can pass
         True as third value for an air attack. Mod (second param) is 1 when 12+ is rolled on detection."""
-        attackRoll = d6Rollx2(game)
+        attackRoll = d6Rollx2()
         attackMods = 0
         if self.systems["Fuel Tanks"] >= 1:
             attackMods += 1
@@ -535,7 +535,7 @@ class Submarine():
             attackMods += 2
 
         print("Taking damage!")
-        printRollandMods(attackRoll, attackMods)
+        #printRollandMods(attackRoll, attackMods)
 
         match attackRoll + attackMods:
             case 2 | 3:
@@ -572,35 +572,82 @@ class Submarine():
             damage = self.damageChart[random.randint(0, 35)]
             match damage:
                 case "crew injury":
+                    print("Crew injured!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.crewInjury(game, attacker, airAttack)
                 case "crew injuryx2":
+                    print("Two crew injured!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.crewInjury(game, attacker, airAttack)
                     self.crewInjury(game, attacker, airAttack)
                 case "flooding":
                     print("Flooding!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.flooding_Damage += 1
                     tookFloodingThisRound = True
                 case "floodingx2":
                     print("Major flooding!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.flooding_Damage += 2
                     tookFloodingThisRound = True
                 case "hull":
                     print("Hull damage!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.hull_Damage += 1
                 case "hullx2":
                     print("Major hull damage!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     self.hull_Damage += 2
                 case "Flak Guns":
                     if self.systems["3.7 Flak"] >= 0:
                         print("Both flak guns have been damaged!")
+                        if game.halsUndBeinbruch > 0:
+                            print("Reroll damage?")
+                            if verifyYorN() == "Y":
+                                game.halsUndBeinbruch -= 1
+                                continue
                         self.systems.update({"3.7 Flak": 1})
                     else:
                         print("Flak gun has been hit!")
+                        if game.halsUndBeinbruch > 0:
+                            print("Reroll damage?")
+                            if verifyYorN() == "Y":
+                                game.halsUndBeinbruch -= 1
+                                continue
                     self.systems.update({"Flak Gun": 1})
                 case "minor":
                     print("Damage is minor, nothing to report!")
                 case _:
                     print("The " + damage + " has taken damage!")
+                    if game.halsUndBeinbruch > 0:
+                        print("Reroll damage?")
+                        if verifyYorN() == "Y":
+                            game.halsUndBeinbruch -= 1
+                            continue
                     # TODO damageVariation = d6Roll()
                     # match damageVariation:
                     #     case 1:
@@ -611,14 +658,14 @@ class Submarine():
         time.sleep(3)
         # check if flooding took place this round and roll for additional flooding chance
         if tookFloodingThisRound:
-            addlFlooding = d6Roll(game)
+            addlFlooding = d6Roll()
             floodingMods = 0
             if self.crew_health["Engineer"] >= 2:
                 floodingMods += 1
             elif self.crew_levels["Engineer"] == 1:
                 floodingMods -= 1
 
-            printRollandMods(addlFlooding, floodingMods)
+            #printRollandMods(addlFlooding, floodingMods)
 
             if addlFlooding + floodingMods <= 4:
                 print("Leaks have been patched- no more flooding.")
@@ -712,7 +759,7 @@ class Submarine():
         if damagedTotal > 0:
             for key in self.systems:
                 if self.systems[key] == 1:
-                    repairRoll = d6Roll(game)
+                    repairRoll = d6Roll()
                     repairMod = 0
                     if self.crew_health["Engineer"] <= 1 and self.crew_levels["Engineer"] > 0:
                         repairMod -= 1
@@ -787,7 +834,7 @@ class Submarine():
         for key in self.crew_health:
             #check for seriously wounded members first and determine if they need to be replaced or will heal in time for next patrol
             if self.crew_health[key] == 2:
-                monthsToHeal = d6Roll(game)
+                monthsToHeal = d6Roll()
                 if self.crew_levels["Doctor"] == 1 and self.crew_health["Doctor"] <= 1:
                     monthsToHeal -= 1
                 if monthsToHeal > refitTime:
@@ -809,18 +856,14 @@ class Submarine():
             if self.crew_levels["Crew"] < 1:
                 self.crew_levels = 1
 
-
     def crewInjury(self, game, attacker, airAttack = False):
-        print("fix")
-
-    def crewInjury(self, game, cm = False):
         #todo probably need to rethink how injuries are stored
-        if cm:
+        if attacker == "Torpedo Incident":
             crewInjuryRoll = 7
             severity = 1
         else:
-            crewInjuryRoll = d6Rollx2(game)
-            severity = d6Roll(game)
+            crewInjuryRoll = d6Rollx2()
+            severity = d6Roll()
         if self.crew_health["Doctor"] <= 1 and self.crew_levels["Doctor"] > 0:
             severity -= 1
         if severity <= 3:
@@ -832,6 +875,7 @@ class Submarine():
         else:
             sevText = "killed in action!"
             wounds = 3
+        #TODO Figure out how to save KMDT with reroll and reroll new injury
         match crewInjuryRoll:
             case 2:
                 toprint = "Kmdt has been " + sevText

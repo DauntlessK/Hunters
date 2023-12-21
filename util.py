@@ -1,24 +1,13 @@
 import random
 
-def d6Roll(game, doubleRoll = False):
+def d6Roll():
     """Rolls 1 die."""
     roll = random.randint(1, 6)
-    if game.halsUndBeinbruch > 0 and not doubleRoll:
-        print("Roll:", roll, " - Spend reroll?")
-        if verifyYorN() == "Y":
-            roll = random.randint(1, 6)
-            game.halsUndBeinbruch -= 1
     return roll
 
-
-def d6Rollx2(game):
+def d6Rollx2():
     """Rolls 2 dice."""
-    roll = d6Roll(game, True) + d6Roll(game, True)
-    if game.halsUndBeinbruch > 0:
-        print("Roll:", roll, " - Spend reroll?")
-        if verifyYorN() == "Y":
-            roll = d6Roll(game, True) + d6Roll(game, True)
-            game.halsUndBeinbruch -= 1
+    roll = d6Roll() + d6Roll()
     return roll
 
 def verifyYorN():
@@ -54,14 +43,15 @@ def printTargetShipList(ship):
         strng = str(s + 1) + ") " + str(ship[s])
         print(strng)
 
-def printRollandMods(roll, mods):
-    """Prints a roll for some check, plus the modifiers, then the modified roll total."""
+def printRollandMods(rollFor, roll, mods):
+    """Prints a roll for some check, plus the modifiers, then the modified roll total.
+    Roll for x (7-): MF || Roll: 4 • Mods: +1"""
     total = roll + mods
     if mods <= 0:
-        print("Roll:", roll, "• Modifiers:", mods, "| MODIFIED ROLL:", total)
+        toPrint = rollFor + " " + str(total) + " || Roll: " + str(roll) + " • Mods: " + str(mods)
     if mods > 0:
-        toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
-        print(toPrint)
+        toPrint = rollFor + " " + str(total) + " || Roll: " + str(roll) + " • Mods: +" + str(mods)
+    print(toPrint)
 
 def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
     invalidInput = True
@@ -87,7 +77,7 @@ def scuttleFromFlooding(game, attacker, airAttack):
     scuttleDRM = 0
     if game.sub.crew_health["Kommandant"] == 2:
         scuttleDRM += 1
-    printRollandMods(scuttleRoll, scuttleDRM)
+    printRollandMods("Scuttle roll (11-):", scuttleRoll, scuttleDRM)
     if scuttleRoll + scuttleDRM <= 11:
         if airAttack:
             print("Successfully scuttled. The U-boat slips under the waves.")
