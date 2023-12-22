@@ -1580,7 +1580,7 @@ class Game():
         else:
             return "Tanker"
 
-    def escortDetection(self, enc, range, depth, timeOfDay, previouslyDetected, firedG7a, firedG7e, escortName, wpMod):
+    def escortDetection(self, enc, range, depth, timeOfDay, previouslyDetected, firedG7a, firedG7e, escortName, wpMod, firedFandA = False):
         """Called when an escort detection roll is required."""
         attackDepth = depth
 
@@ -1608,7 +1608,6 @@ class Game():
                 escortMods -= 1
         else:
             if depth != "Surfaced" or previouslyDetected:
-                # print("Current damage/HP: ", self.sub.hull_Damage, "/", self.sub.hull_hp)
                 self.sub.printStatus()
                 print("Dive to test depth?")
                 testDive = verifyYorN()
@@ -1638,7 +1637,8 @@ class Game():
                 escortMods += 1
             if attackDepth == "Surfaced" and timeOfDay == "Night" and self.getYear() >= 1941:
                 escortMods += 1
-            # TODO deal with forward + aft salvoes, wolfpack
+            if firedFandA:
+                escortMods += 1
             if range == 6:
                 escortMods -= 1
             if depth == "Test Depth":
@@ -1885,23 +1885,28 @@ class Game():
             case 3:
                 r = 6  # hit on 6 or less
 
+        # show and assign weps
+        if not detectedOnClose:
+            self.sub.subSupplyPrintout(False)
+            self.getAttackType(ship, depth, timeOfDay, r)
+
+        if self.firedForward and self.firedAft:
+            firedBoth = True
+        else:
+            firedBoth = False
+
+        # post shot escort detection
+        if Escorted(ship) and not detectedOnClose:
+            print("Escort incoming on our position!")
+            time.sleep(2)
+            self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired, ship[0].name, 0, firedBoth)
+
         # resets to zero the number of torpedoes fired for the engagement
         self.G7aFired = 0
         self.G7eFired = 0
         self.firedForward = False
         self.firedAft = False
         self.firedDeckGun = False
-
-        # show and assign weps
-        if not detectedOnClose:
-            self.sub.subSupplyPrintout(False)
-            self.getAttackType(ship, depth, timeOfDay, r)
-
-        # post shot escort detection
-        if Escorted(ship) and not detectedOnClose:
-            print("Escort incoming on our position!")
-            time.sleep(2)
-            self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired, ship[0].name, 0)
 
         #deal with additional attacks on unescorted
         shipsSunk = 0
