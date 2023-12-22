@@ -141,7 +141,7 @@ def gameover(game, cause):
     adjustedOrders = adjustedOrders.strip('(Minelaying)')
     adjustedOrders = adjustedOrders.strip('(Wolfpack)')
     adjustedOrders = adjustedOrders.strip('(Abwehr Agent Delivery)')
-    if cause == "Survived - promoted to desk job":
+    if cause == "Survived - promoted to desk job in Training Command":
         toprint = "Promoted to a desk job in Training Command"
     elif "KIA" in cause:
         toprint = cause

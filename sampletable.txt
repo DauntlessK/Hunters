@@ -1,0 +1,4 @@
+  #  |         CAPTAIN NAME          |  U-BOAT  | PATROLS |   GRT   | DAMAGE DONE | DAMAGE TAKEN |  RE |        FATE
+——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+  1  |        Otto Kertschmer        |   U-55   |   16    | 256,000 |     75      |     44       |  1  |  Captured after scuttling from depth charges by USS Ship
+  2  |            Kyle BB            |  U-777   |    9    | 241,000 |     98      |     52       |  3  |  Survived - promoted to desk job in Training Command

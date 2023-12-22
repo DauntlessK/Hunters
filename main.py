@@ -10,9 +10,11 @@ from util import *
 
 #TODO:
 #high score recording
+#hals rerolls (promotions, damage assignment, and game overs)
 #crew injury rolls
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or variants
 #related to above, new uboat due to scuttle from diesels and rescue
+#replace expert 1WO on roll of 6 at end of each patrol
 
 
 #BUGS SEEN----
