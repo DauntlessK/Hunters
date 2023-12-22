@@ -10,7 +10,6 @@ from util import *
 
 #TODO:
 #high score recording
-#wolfpacks
 #crew injury rolls
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or variants
 #related to above, new uboat due to scuttle from diesels and rescue
@@ -18,8 +17,10 @@ from util import *
 
 #BUGS SEEN----
 #following damaged ship went straight to next box prompt
+#followed convoy instead of damaged ship and went to next box, no message
 #mission loop (deploying mines)
 #did not deploy aft mines
+#following after early (close) detection may result in losing escort
 
 class Game():
 
@@ -68,6 +69,9 @@ class Game():
         self.firedAft = False
         self.firedDeckGun = False
         self.shipsSunk = []
+        self.damageDone = 0
+        self.hitsTaken = 0
+        self.randomEvents = 0
         self.pastSubs = []
         self.gameStartText()
         self.startGame()
@@ -367,7 +371,6 @@ class Game():
     def buildPatrol(self, patrol):
         """Builds array of strings, each item being a step in the patrol. Step 0 is port."""
         #build patrol for non NA patrols
-        #TODO WOLFPACKS
         NAorders = False
         if self.currentOrders == "North America" or self.currentOrders == "Carribean":
             NAorders = True
@@ -702,17 +705,20 @@ class Game():
                 self.sub = self.chooseSub(True)
                 self.id = random.randint(10,999)
                 #todo - Does crew move over? need to move crew over
-                #todo get new sub ID
                 reassigned = True
                 self.eligibleForNewBoat = False
-                toP = "You've been assigned to U-" + self.id
+                toP = "You've been assigned to U-" + str(self.id)
                 print(toP)
 
         totalTonnage = 0
         for x in range(len(self.shipsSunk)):
             totalTonnage = totalTonnage + self.shipsSunk[x].GRT
         totalTonnage = f"{totalTonnage:,}"
-        print("You've made", str(self.patrolNum), "patrols and sunk", str(len(self.shipsSunk)), "ships totaling", totalTonnage, "tons.")
+        if self.patrolNum > 1:
+            print("You've made", str(self.patrolNum), "patrols and sunk", str(len(self.shipsSunk)), "ships totaling", totalTonnage, "tons.")
+        else:
+            print("You've made", str(self.patrolNum), "patrol and sunk", str(len(self.shipsSunk)), "ships totaling",
+                  totalTonnage, "tons.")
         # for x in range(len(self.shipsSunk)):
         #     if x+1 != len(self.shipsSunk):
         #         print(self.shipsSunk[x], end=", ")
@@ -969,7 +975,7 @@ class Game():
                         else:
                             print("We were unable to slip through! An escort is headed for us!")
                         shipE = Ship("Escort")
-                        self.escortDetection("", 7, "Submerged", "Day", True, 0, 0, shipE.name)
+                        self.escortDetection("", 7, "Submerged", "Day", True, 0, 0, shipE.name, 0)
                     case 4 | 5:
                         if loc == "Additional Round of Combat":
                             if existingPlane == "":
@@ -1156,6 +1162,8 @@ class Game():
         time.sleep(3)
 
     def encounterRandomEvent(self):
+        """When 12 is rolled for the first time on an encounter box in a patrol - roll against random event table."""
+        self.randomEvents += 1
         eventroll = d6Rollx2()
         match eventroll:
             case 2:
@@ -1414,14 +1422,14 @@ class Game():
                     if shipsDamaged > 0:
                         followPrompt = getInputNum("Follow damaged ship(s) or the convoy?\n1) Damaged Ships\n2) Convoy", 1, 2)
                     else:
-                        followPrompt = "2"
+                        followPrompt = 2
 
                     match followPrompt:
                         #Following damaged ship(s) - remove undamaged ships, automatic follow, see if it was escorted
-                        case "1":
+                        case 1:
                             self.followFlow(ship)
                         #following convoy, roll to follow etc
-                        case "2":
+                        case 2:
                             followRoll = d6Roll()
                             if followRoll <= 4 or self.sub.knightsCross == 4:
                                 self.encounterAttack("Convoy")
@@ -1484,7 +1492,7 @@ class Game():
                                 newShip.append(ship[0])
                                 if ship[1] is not None:
                                     newShip.append(ship[1])
-                                self.escortDetection(enc, 7, "Submerged", "Day", False, self.G7aFired, self.G7eFired, newShip[0].name)
+                                self.escortDetection(enc, 7, "Submerged", "Day", False, self.G7aFired, self.G7eFired, newShip[0].name, 0)
                                 self.encounterAttack("Ship + Escort", newShip)
                             else:
                                 print("Closing to attack again!")
@@ -1523,9 +1531,9 @@ class Game():
 
             if ship[0].type == "Escort":
                 b = getInputNum("Select ship to follow: ", 1, len(ship)-1)
-            elif b < 0 or b > len(ship):
-                b = getInputNum("Select ship to follow: ", 0, len(ship)-1)
-                b = b = 1
+            else:
+                b = getInputNum("Select ship to follow: ", 1, len(ship))
+                b = b - 1
 
             newShip2 = []
             if Escorted(ship):
@@ -1572,12 +1580,24 @@ class Game():
         else:
             return "Tanker"
 
-    def escortDetection(self, enc, range, depth, timeOfDay, previouslyDetected, firedG7a, firedG7e, escortName):
+    def escortDetection(self, enc, range, depth, timeOfDay, previouslyDetected, firedG7a, firedG7e, escortName, wpMod):
         """Called when an escort detection roll is required."""
         attackDepth = depth
 
         escortRoll = d6Rollx2()
         escortMods = 0
+
+        #if wolfpack and -1 passed in to escort detection (not rolled yet for combat)
+        #determine if escorts are busy with other boats, or focused on player's
+        if "Wolfpack" in self.currentOrders and wpMod == 0 and enc == "Convoy":
+            wolfpackRoll = d6Roll()
+            if wolfpackRoll <= 5:
+                print("Escorts are busy chasing other U-Boats, we should have an easier time attacking.")
+                wpMod = -1
+            else:
+                print("Escorts are focused on our boat, we will have a harder time attacking.")
+                wpMod = 1
+            escortMods += wpMod
 
         # deal with close range detection before anything has been fired first, then deal with normal detection
         if range == 8 and firedG7a == 0 and firedG7e == 0 and previouslyDetected == False:
@@ -1642,7 +1662,7 @@ class Game():
             print("Detected! Big Problems!")
             self.sub.attacked(self, attackDepth, 1, self.getYear(), escortName)
         time.sleep(3)
-        self.escortDetection(enc, range, depth, timeOfDay, True, firedG7a, firedG7e, escortName)
+        self.escortDetection(enc, range, depth, timeOfDay, True, firedG7a, firedG7e, escortName, wpMod)
 
     def wasDud(self, torp):
         """Determines whether a fired torpedo was a dud based on date and a d6 roll"""
@@ -1852,13 +1872,13 @@ class Game():
                         print("Detected! Big Problems!")
                         self.sub.attacked(self, "Submerged", 1, self.getYear(), ship[0].name)
                         time.sleep(3)
-                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0, ship[0].name)
+                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0, ship[0].name, 0)
                         detectedOnClose = True
                     elif detectionRoll + detectionMods >= 10:
                         print("They've detected us before we could attack!")
                         self.sub.attacked(self, "Submerged", 0, self.getYear(), ship[0].name)
                         time.sleep(3)
-                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0, ship[0].name)
+                        self.escortDetection(enc, 8, depth, timeOfDay, True, 0, 0, ship[0].name, 0)
                         detectedOnClose = True
             case 2:
                 r = 7  # hit on 7 or less
@@ -1881,7 +1901,7 @@ class Game():
         if Escorted(ship) and not detectedOnClose:
             print("Escort incoming on our position!")
             time.sleep(2)
-            self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired, ship[0].name)
+            self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired, ship[0].name, 0)
 
         #deal with additional attacks on unescorted
         shipsSunk = 0
@@ -2028,18 +2048,22 @@ class Game():
                                     print("Massive damage! (4)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(4)
+                                    self.damageDone += 4
                                 case 2:
                                     print("Critical damage! (3)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(3)
+                                    self.damageDone += 3
                                 case 3:
                                     print("Serious damage! (2)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(2)
+                                    self.damageDone += 2
                                 case _:
                                     print("Minor damage! (1)")
                                     ship[s].removeG7a()
                                     ship[s].takeDamage(1)
+                                    self.damageDone += 1
                             time.sleep(3)
                     else:
                         print("Torpedo Missed.")
@@ -2067,18 +2091,22 @@ class Game():
                                     print("Massive damage! (4)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(4)
+                                    self.damageDone += 4
                                 case 2:
                                     print("Critical damage! (3)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(3)
+                                    self.damageDone += 3
                                 case 3:
                                     print("Serious damage! (2)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(2)
+                                    self.damageDone += 2
                                 case _:
                                     print("Minor damage! (1)")
                                     ship[s].removeG7e()
                                     ship[s].takeDamage(1)
+                                    self.damageDone += 1
                             time.sleep(3)
                     else:
                         print("Torpedo Missed.")
@@ -2134,6 +2162,7 @@ class Game():
                     damage = 1
                 print("Hit!", ship[target].name, "takes", damage, "damage!")
                 ship[target].takeDamage(damage)
+                self.damageDone += damage
             else:
                 print("Deck gun missed!")
             self.sub.deck_gun_ammo -= 1
@@ -2143,12 +2172,5 @@ class Game():
             print(ship[target].name, "has been sunk!")
             self.shipsSunk.append(ship[target])
             time.sleep(3)
-
-def Escorted(ships):
-    """Returns true if the list of ships passed has an escort (as its first ship)"""
-    if ships[0].type == "Escort":
-        return True
-    else:
-        return False
 
 Game()

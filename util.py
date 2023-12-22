@@ -70,7 +70,12 @@ def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
         else:
             return inp
 
-
+def Escorted(ships):
+    """Returns true if the list of ships passed has an escort (as its first ship)"""
+    if ships[0].type == "Escort":
+        return True
+    else:
+        return False
 def scuttleFromFlooding(game, attacker, airAttack):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
     scuttleRoll = d6Rollx2(game)
@@ -210,22 +215,26 @@ def gameover(game, cause):
     #print("End date:", game.getFullDate)
     print("Ships sunk:", str(len(game.shipsSunk)))
     grtSunk = 0
-    damageCount = 0
     for x in range (len(game.shipsSunk)):
         grtSunk += game.shipsSunk[x].GRT
-        damageCount += game.shipsSunk[x].damage
+    grtSunk = f"{grtSunk:,}"
     print("GRT sunk:", str(grtSunk))
-    print("Damage done:", str(damageCount))
+    print("Damage done:", str(game.damageDone))
+    print("Hits taken:", str(game.hitsTaken))
+    print("Random Events:", str(game.randomEvents))
     print("Result: ", end="")
     if "Captured" in cause:
         print("DEFEAT!")
         print("You are a disgrace to the Kriegsmarine, your family, and yourself. Consider a career after the war on land.\nYour U-Boat was captured and you have delivered a working Enigma code machine and other secrets into\nAllied hands, possibly sabotaging the entire U-Boat campaign.")
     elif grtSunk < 50000:
         print("DEFEAT")
-        print("You are a disgrace to the Kriegsmarine, your family, and yourself. Consider a career after the war on land.")
+        if "Survived" in cause:
+            print("You are a disgrace to the Kriegsmarine, your family, and yourself. Consider a career after the war on land.")
+        else:
+            print("You are a disgrace to the Kriegsmarine, your family, and yourself. You should have signed up for something on land instead.")
     elif grtSunk < 100000:
         print("DRAW")
-        print("You have fulfilled your obligations to the nation. Book and movie offers after the war are probably not in the cards, however.")
+        print("You have fulfilled your obligations to the nation. Book and movies about you are probably not in the cards, however.")
     elif grtSunk < 150000:
         print("MARGINAL VICTORY")
         if "Survived" in cause:

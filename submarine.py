@@ -558,15 +558,16 @@ class Submarine():
             case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
                 print("Too much damage sir!! We're done for!")
                 if airAttack:
-                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic hull damage from a " + attackerName
+                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic damage from a " + attackerName
                     gameover(game, gameOverText)
                 else:
-                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic hull damage done by depth charges from the " + attackerName
+                    gameOverText = "Sunk " + game.getFullDate() + " by catastrophic damage done by depth charges from the " + attackerName
                     gameover(game, gameOverText)
 
     def damage(self, game, numOfHits, attacker, airAttack = False):
         """Rolls against damage chart E4 x number of times and adjusts the Submarine object accordingly. Then checks
         for being sunk etc."""
+        game.hitsTaken += numOfHits
         tookFloodingThisRound = False
         for x in range(numOfHits):
             damage = self.damageChart[random.randint(0, 35)]
@@ -921,13 +922,3 @@ class Submarine():
             case 12:
                 if self.crew_health["Abwehr Agent"] >= 0:
                     self.crew_health["Abwehr Agent"] += wounds
-
-
-def printRollandMods(roll, mods):
-    """Prints a roll for some check, plus the modifiers, then the modified roll total."""
-    total = roll + mods
-    if mods <= 0:
-        print("Roll:", roll, "• Modifiers:", mods, "| MODIFIED ROLL:", total)
-    if mods > 0:
-        toPrint = "Roll: " + str(roll) + " • Modifiers: +" + str(mods) + " | MODIFIED ROLL: " + str(total)
-        print(toPrint)
