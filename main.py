@@ -11,10 +11,12 @@ from util import *
 #TODO:
 #high score recording
 #hals rerolls (promotions, damage assignment, and game overs)
+#order in which escorts on convoy duty roll (before firing torps?)
 #crew injury rolls
 #request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or variants
 #related to above, new uboat due to scuttle from diesels and rescue
 #replace expert 1WO on roll of 6 at end of each patrol
+#ensure notes for all random events pop up (text for all occasions)
 
 
 #BUGS SEEN----
@@ -23,6 +25,7 @@ from util import *
 #mission loop (deploying mines)
 #did not deploy aft mines
 #following after early (close) detection may result in losing escort
+#was able to fire deck gun twice---- resetting of what fired not working
 
 class Game():
 
@@ -92,7 +95,14 @@ class Game():
 
         #get player info
         self.sub = Submarine(self.chooseSub())
-        self.kmdt = input("Enter Kommandant name: ")
+        invalid = True
+        while invalid:
+            self.kmdt = input("Enter Kommandant name: ")
+            if "_" in self.kmdt:
+                print("Commas not allowed.")
+                continue
+            else:
+                invalid = False
         self.id = getInputNum("Enter U-Boat #: ", 1, 9999)
 
         self.sub.torpedoResupply()
@@ -110,6 +120,11 @@ class Game():
     def getFullDate(self):
         """Returns string of the month - year"""
         toReturn = self.month[self.date_month] + " - " + str(self.date_year)
+        return toReturn
+
+    def getFullUboatID(self):
+        """Returns string 'U-XXX'"""
+        toReturn = "U-" + str(self.id)
         return toReturn
 
     def getOfficerRank(self):
@@ -316,7 +331,7 @@ class Game():
         """Determines full length of a given patrol (number of on station steps + all transit steps"""
         match patrol:
             case "North America" | "Caribbean":
-                return self.sub.patrol_length + 8  # NA patrol has normal 2 BoB + 2 transits + extra 4 transits
+                return self.sub.patrol_length - 1 + 8  # NA patrol has 1 less on station patrol + 2 BoB + EXTRA 2 transits
             case _:
                 return self.sub.patrol_length + 4
 
@@ -1276,7 +1291,7 @@ class Game():
             print("ALARM! Aircraft in sight! Looks like it's a", aircraftT)
             #print("Rolling to crash dive!")
         else:
-            print(aircraft, "is making another attack run!")
+            print(aircraftT, "is making another attack run!")
 
         time.sleep(2)
         roll = d6Rollx2()
@@ -1903,13 +1918,6 @@ class Game():
             time.sleep(2)
             self.escortDetection(enc, r, depth, timeOfDay, False, self.G7aFired, self.G7eFired, ship[0].name, 0, firedBoth)
 
-        # resets to zero the number of torpedoes fired for the engagement
-        self.G7aFired = 0
-        self.G7eFired = 0
-        self.firedForward = False
-        self.firedAft = False
-        self.firedDeckGun = False
-
         #deal with additional attacks on unescorted
         shipsSunk = 0
         shipsDamaged = 0
@@ -1943,6 +1951,12 @@ class Game():
             if verifyYorN() == "Y":
                 self.getAttackType(ship, depth, timeOfDay, r)
 
+        # resets to zero the number of torpedoes fired for the engagement
+        self.G7aFired = 0
+        self.G7eFired = 0
+        self.firedForward = False
+        self.firedAft = False
+        self.firedDeckGun = False
 
 
     def getTarget(self, ship):
@@ -2181,3 +2195,5 @@ class Game():
             time.sleep(3)
 
 Game()
+
+#list2 = insertNewScore("Sue", "U-21", "5", "242,500", "31", "55", "4", "Ded!")

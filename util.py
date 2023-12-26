@@ -1,4 +1,5 @@
 import random
+from operator import *
 
 def d6Roll():
     """Rolls 1 die."""
@@ -217,11 +218,15 @@ def gameover(game, cause):
     grtSunk = 0
     for x in range (len(game.shipsSunk)):
         grtSunk += game.shipsSunk[x].GRT
-    grtSunk = f"{grtSunk:,}"
-    print("GRT sunk:", str(grtSunk))
+    grtSunkSTR = f"{grtSunk:,}"
+    print("GRT sunk:", str(grtSunkSTR))
     print("Damage done:", str(game.damageDone))
     print("Hits taken:", str(game.hitsTaken))
     print("Random Events:", str(game.randomEvents))
+
+    fate = cause + whilePatrolling
+    insertNewScore(game.kmdt, game.getFullUboatID(), str(game.patrolNum - 1), str(grtSunk), str(game.damageDone), str(game.hitsTaken), str(game.randomEvents), fate)
+
     print("Result: ", end="")
     if "Captured" in cause:
         print("DEFEAT!")
@@ -255,3 +260,76 @@ def gameover(game, cause):
             print("You were the scourge of the seas and the pride of the entire Kriegsmarine. Your legendary exploits place you at the top of the U-Boat elite and are mentioned prominently in propaganda efforts.")
 
     raise SystemExit
+
+#-----------------------------------------------SCORE RECORDING
+
+def createScoreArray():
+    with open("scores.txt", "r") as fp:
+        lines = fp.readlines()
+        scoreList = []
+
+        for x in range (len(lines)):
+            y = lines[x].split("_")
+            y[7] = y[7].replace("\n", "")
+            newEntry = addScore(y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7])
+            scoreList.append(newEntry)
+
+        return scoreList
+
+def addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
+
+    newDictEntry = {
+                "NAME" : name,
+                "U-BOAT" : uboat,
+                "PATROLS" : patrols,
+                "GRT" : GRT,
+                "DAMAGE DONE" : damageDone,
+                "HITS TAKEN" : hitsTaken,
+                "RAN" : ran,
+                "FATE" : fate
+            }
+    return newDictEntry
+
+def insertNewScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
+
+    newList = []
+    notInserted = True
+    originalList = createScoreArray()
+
+    try:
+        GRTINT = GRT.replace(",", "")
+        GRTINT = int(GRTINT)
+    except:
+        print("Error creating GRT int")
+
+    for x in range (len(originalList)):
+        try:
+            origGRT = originalList[x]["GRT"]
+            origGRT = origGRT.replace(",", "")
+            origGRT = int(origGRT)
+        except:
+            print("Error creating original GRT int")
+
+        if GRTINT > origGRT and notInserted:
+            toAdd = addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate)
+            newList.append(toAdd)
+            notInserted = False
+
+        newList.append(originalList[x])
+    #add for very end of list
+    if notInserted:
+        toAdd = addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate)
+        newList.append(toAdd)
+
+    writeNewScores(newList)
+
+def writeNewScores(listOfScores):
+    f = open("scores.txt", "w")
+    for x in range (len(listOfScores)):
+        for key in (listOfScores[x]):
+            f.write(listOfScores[x][key])
+            if key != "FATE":
+                f.write("_")
+            else:
+                if x != len(listOfScores) - 1:
+                    f.write("\n")
