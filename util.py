@@ -1,6 +1,7 @@
 import random
 import math
 from operator import *
+from datetime import datetime
 
 def d6Roll():
     """Rolls 1 die."""
@@ -214,6 +215,9 @@ def gameover(game, cause):
 
     if game.sub.knightsCross > 0:
         print("Awards:", game.awardName[game.sub.knightsCross])
+        award = game.awardName[game.sub.knightsCross]
+    else:
+        award = "-"
     print("Patrols completed:", str(game.patrolNum - 1))
     #print("End date:", game.getFullDate)
     print("Ships sunk:", str(len(game.shipsSunk)))
@@ -230,8 +234,11 @@ def gameover(game, cause):
     print("Hits taken:", str(game.hitsTaken))
     print("Random Events:", str(game.randomEvents))
 
+    now = str(datetime.now())
+    now = now.split(".")
+    now = now[0]
     fate = cause + whilePatrolling
-    insertNewScore(game.kmdt, game.getFullUboatID(), str(game.patrolNum - 1), str(grtSunk), str(game.damageDone), str(len(game.shipsSunk)), str(warshipsSunk), str(game.hitsTaken), str(game.randomEvents), fate)
+    insertNewScore(game.kmdt, game.getFullUboatID(), game.sub.getType(), str(game.patrolNum - 1), str(grtSunkSTR), str(game.damageDone), str(len(game.shipsSunk)), str(warshipsSunk), str(game.hitsTaken), str(game.randomEvents), fate, game.getOfficerRank(), award, now)
 
     print("Result: ", end="")
     if "Captured" in cause:
@@ -279,17 +286,18 @@ def createScoreArray():
 
         for x in range (len(lines)):
             y = lines[x].split("_")
-            y[9] = y[9].replace("\n", "")
-            newEntry = addScore(y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7], y[8], y[9])
+            y[13] = y[13].replace("\n", "")
+            newEntry = addScore(y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7], y[8], y[9], y[10], y[11], y[12], y[13])
             scoreList.append(newEntry)
 
         return scoreList
 
-def addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate):
+def addScore(name, uboat, type, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate, rank, awards, timestamp):
 
     newDictEntry = {
                 "NAME" : name,
                 "U-BOAT" : uboat,
+                "TYPE" : type,
                 "PATROLS" : patrols,
                 "GRT" : GRT,
                 "DAMAGE DONE" : damageDone,
@@ -297,11 +305,14 @@ def addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate
                 "WS" : WS,
                 "HITS TAKEN" : hitsTaken,
                 "RAN" : ran,
-                "FATE" : fate
+                "FATE" : fate,
+                "RANK": rank,
+                "AWARDS" : awards,
+                "TIMESTAMP" : timestamp
             }
     return newDictEntry
 
-def insertNewScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate):
+def insertNewScore(name, uboat, type, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate, rank, awards, timestamp):
 
     newList = []
     notInserted = True
@@ -322,14 +333,14 @@ def insertNewScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran
             print("Error creating original GRT int")
 
         if GRTINT > origGRT and notInserted:
-            toAdd = addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate)
+            toAdd = addScore(name, uboat, type, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate, rank, awards, timestamp)
             newList.append(toAdd)
             notInserted = False
 
         newList.append(originalList[x])
     #add for very end of list
     if notInserted:
-        toAdd = addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate)
+        toAdd = addScore(name, uboat, type, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate, rank, awards, timestamp)
         newList.append(toAdd)
 
     writeNewScores(newList)
@@ -339,7 +350,7 @@ def writeNewScores(listOfScores):
     for x in range (len(listOfScores)):
         for key in (listOfScores[x]):
             f.write(listOfScores[x][key])
-            if key != "FATE":
+            if key != "TIMESTAMP":
                 f.write("_")
             else:
                 if x != len(listOfScores) - 1:
@@ -350,19 +361,20 @@ def printTable():
 
     #print table header
     print("———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————")
-    print("  #  |           CAPTAIN NAME          |  U-BOAT   |  PATROLS  |    GRT    | DAMAGE DONE | SS  | WS  |  HITS TAKEN | RAN |                            FATE")
-    #COLUMN SPACING: 5 RANK, 33 NAME, 11 UBOAT, 11 PATROLS, 11 GRT, 13 DAMAGE DONE, 13 HITS TAKEN, 5 RE, 12+ FATE
+    print("  #  |        CAPTAIN NAME       |  U-BOAT   | TYPE  | PTRLS |    GRT    | DMG DON | SS  | WS  | HTS RCV | RAN |               FATE")
+    #COLUMN SPACING: 5 RANK, 27 NAME, 11 UBOAT, 7 PATROLS, 11 GRT, 13 DAMAGE DONE, 13 HITS TAKEN, 5 RE, 12+ FATE
     print("———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————")
     for x in range (len(scoreList)):
         printColumn(5, str(x+1))
-        printColumn(33, scoreList[x]["NAME"])
+        printColumn(27, scoreList[x]["NAME"])
         printColumn(11, scoreList[x]["U-BOAT"])
-        printColumn(11, scoreList[x]["PATROLS"])
+        printColumn(7, scoreList[x]["TYPE"])
+        printColumn(7, scoreList[x]["PATROLS"])
         printColumn(11, scoreList[x]["GRT"])
-        printColumn(13, scoreList[x]["DAMAGE DONE"])
+        printColumn(9, scoreList[x]["DAMAGE DONE"])
         printColumn(5, scoreList[x]["SS"])
         printColumn(5, scoreList[x]["WS"])
-        printColumn(13, scoreList[x]["HITS TAKEN"])
+        printColumn(9, scoreList[x]["HITS TAKEN"])
         printColumn(5, scoreList[x]["RAN"])
         printColumn(150, scoreList[x]["FATE"], True)
 
@@ -382,6 +394,9 @@ def printColumn(totalWidth, toPrint, fate = False):
     spacesOnLeft = int(spacesOnLeft)
     spacesOnRight = int(spacesOnRight)
 
+    if fate:
+        spacesOnLeft = 2
+
     for x in range (spacesOnLeft):
         print(" ", end="")
     print(toPrint, end="")
@@ -390,3 +405,5 @@ def printColumn(totalWidth, toPrint, fate = False):
         for x in range(spacesOnRight):
             print(" ", end="")
         print("|", end="")
+    else:
+        print("")

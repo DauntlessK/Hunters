@@ -278,13 +278,13 @@ class Submarine():
         elif torpedoType == "G7e":
             return self.forward_G7e + self.aft_G7e + self.reloads_forward_G7e + self.reloads_aft_G7e
 
-    def addTorpedoes(type, numToAdd):
+    def addTorpedoes(self, torpType, numToAdd):
         """Adds X amount of torpedoes (up to the allowable amount as per the max torpedoes for the type)"""
         totalTorpedoes = self.getTotalTorpedoes()
         maxCanAdd = self.G7aStarting + self.G7eStarting - totalTorpedoes
         actualNumToAdd = numToAdd
 
-        if type == "G7a":
+        if torpType == "G7a":
             totalG7a = self.getTotalTorpedoes("G7a")
             maxG7a = self.G7aStarting + self.torpedo_type_spread
 
@@ -323,7 +323,7 @@ class Submarine():
 
             return actualNumToAdd
 
-        elif type == "G7e":
+        elif torpType == "G7e":
             totalG7e = self.getTotalTorpedoes("G7e")
             maxG7e = self.G7eStarting + self.torpedo_type_spread
 
@@ -654,7 +654,7 @@ class Submarine():
                     if self.systems[damage] != 2:
                         self.systems.update({damage: 1})
 
-        time.sleep(3)
+        time.sleep(2)
         # check if flooding took place this round and roll for additional flooding chance
         if tookFloodingThisRound:
             addlFlooding = d6Roll()

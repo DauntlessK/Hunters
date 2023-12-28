@@ -2,6 +2,7 @@
 import random
 import os
 import time
+from datetime import datetime
 from operator import *
 from ship import *
 from submarine import *
@@ -9,13 +10,9 @@ from aircraft import *
 from util import *
 
 #TODO:
-#high score recording
 #hals rerolls (promotions, damage assignment, and game overs)
 #order in which escorts on convoy duty roll (before firing torps?)
 #crew injury rolls
-#request new uboat (reassignment rulebook 11.4) if, at the end of a patrol, player receives knights cross or variants
-#related to above, new uboat due to scuttle from diesels and rescue
-#replace expert 1WO on roll of 6 at end of each patrol
 #ensure notes for all random events pop up (text for all occasions)
 
 
@@ -25,7 +22,7 @@ from util import *
 #mission loop (deploying mines)
 #did not deploy aft mines
 #following after early (close) detection may result in losing escort
-#was able to fire deck gun twice---- resetting of what fired not working
+#did 2 damage with VII deck gun
 
 class Game():
 
@@ -51,6 +48,7 @@ class Game():
                             "twenty-third", "twenty-fourth"]
         self.patrolNum = 1
         self.sunkOnCurrentPatrol = 0
+        self.missionComplete = False
         self.successfulPatrols = 0
         self.unsuccessfulPatrols = 0
         self.unsuccessfulPatrolsInARow = 0
@@ -60,6 +58,7 @@ class Game():
         self.superiorTorpedoes = False
         self.halsUndBeinbruch = 0
         self.weatherDuty = False
+        self.severeWeather = False
         self.eligibleForNewBoat = False
         self.lastPatrolWasUnsuccessful = False
         self.abortingPatrol = False
@@ -99,9 +98,9 @@ class Game():
         while invalid:
             self.kmdt = input("Enter Kommandant name: ")
             if "_" in self.kmdt:
-                print("Commas not allowed.")
+                print("Underscores not allowed.")
                 continue
-            elif len(self.kmdt) > 32:
+            elif len(self.kmdt) > 27:
                 print("Name too long.")
                 continue
             else:
@@ -212,7 +211,6 @@ class Game():
                         self.sub.crew_levels["Kommandant"] = 1
                     else:
                         self.sub.crew_levels["Kommandant"] = 0
-
 
     def chooseSub(self, reassignment = False):
         """Gets input from player to choose Submarine Type"""
@@ -437,7 +435,6 @@ class Game():
             if self.date_year == 1943 and self.date_month > 5:
                 playing = False
 
-        #TODO game over stuff, high scores etc
         self.promotionCheck()
         gameover(self, "Survived - promoted to desk job")
 
@@ -538,6 +535,10 @@ class Game():
                 print("Sending weather reports.")
                 x += 1
                 continue
+            if self.severeWeather and (x < len(self.patrolArray) - 2 or x < len(self.patrolArray) - 1):
+                print("We ride out the storm for a while and finally the storm abates.")
+                x += 1
+                continue
 
             #skip first iteration of asking for action (on departure)- otherwise ask for next action before making roll
             if x == 1:
@@ -567,15 +568,14 @@ class Game():
             if self.sub.dieselsInop() == 1 and currentBoxName == "Transit":
                 self.getEncounter(currentBoxName, self.getYear(), self.randomEvent)
 
+            # check for resupply at the last patrol space before transit home
+            if x == len(self.patrolArray) - 2:
+                if self.currentOrders != "Mediterranean" or self.currentOrders != "North America" or self.currentOrders != "Caribbean":
+                    if self.milkCow():
+                        x = 3
+
             #increment loop and move to next box
             x += 1
-
-        #check for resupply at the last patrol space before transit home
-        if x == len(self.patrolArray) - 2:
-            if self.currentOrders != "Mediterranean" or self.currentOrders != "North America" or self.currentOrders != "Caribbean":
-                if self.milkCow():
-                    x = 3
-
 
         # check at end of patrol... if it was a Med patrol, set U boat permanently to Med
         if self.currentOrders == "Mediterranean":
@@ -599,20 +599,10 @@ class Game():
 
     def portReturn(self):
         """Called after patrol to deal with notification, print out sunk ships so far, and then deal with repair and rearm."""
-        # TODO messages based on repair (safely returns, returns with minor damage, limps back to port, etc?)
-        print("====================================================")
-        returnMessage = "U-" + str(self.id) + " glides back into port with much fanfare."
-        print(returnMessage)
 
-        if self.sunkOnCurrentPatrol > 0:
-            print("Well done. We've had another successful patrol.")
-            self.successfulPatrols += 1
-            self.unsuccessfulPatrolsInARow = 0
-            self.lastPatrolWasUnsuccessful = False
-        else:
-            self.unsuccessfulPatrols += 1
-            self.lastPatrolWasUnsuccessful = True
-        #reset ships sunk on current patrol
+        self.portReturnText()
+
+        # reset ships sunk on current patrol
         self.shipsSunkSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + self.sunkOnCurrentPatrol
         self.sunkOnCurrentPatrol = 0
 
@@ -639,6 +629,8 @@ class Game():
         self.superiorTorpedoes = False
         #reset random Event
         self.randomEvent = False
+        #reset successful mission
+        self.missionComplete = False
 
         #determine if crew rank increases
         if self.successfulPatrols >= 3:
@@ -664,6 +656,12 @@ class Game():
                         print("They can't gain more experience!")
                         self.sub.crew_levels["Crew"] = 3
             self.successfulPatrols = 0
+
+        #determine if 1WO is experienced, and roll to see if he is promoted out of the ship
+        if self.sub.crew_levels["Watch Officer 1"] == 1:
+            if d6Roll() == 6:
+                print("Watch Officer 1 has been promoted to captain a new boat. You have received a replacement 1WO.")
+                self.sub.crew_levels["Watch Officer 1"] = 0
 
         #Report of total ships and tonnage sunk to date
         #determine if 3 unsuccessful patrols were made in a row
@@ -726,6 +724,61 @@ class Game():
                 self.sub.torpedoResupply()
         else:
             self.sub.torpedoResupply()
+
+    def portReturnText(self):
+        """Runs through patrol return flavor text and checks last patrol success or failure"""
+        flavorText1 = d6Roll()
+        flavorText2 = d6Roll()
+        print("====================================================")
+        damagedTotal = countOf(self.sub.systems.values(), 1)
+        if self.sub.hull_Damage >= 6:
+            returnMessage = "U-" + str(self.id) + " slowly moves into the bay, barely afloat. A tug is needed to help you in."
+        elif self.sub.hull_Damage >= 4:
+            returnMessage = "U-" + str(self.id) + " limps back into port, scarred and damaged, but still afloat."
+        elif damagedTotal > 3:
+            returnMessage = "U-" + str(self.id) + " returns to port with visible signs of damage."
+        else:
+            match flavorText1:
+                case 1 | 2:
+                    returnMessage = "U-" + str(self.id) + " glides back into port with much fanfare."
+                case 3 | 4:
+                    returnMessage = "U-" + str(self.id) + " cruises into your home port with the band playing on the pier."
+                case 5 | 6:
+                    returnMessage = "U-" + str(self.id) + " is welcomed back to port with cheers and flowers."
+        print(returnMessage)
+
+        if self.missionComplete:
+            match flavorText2:
+                case 1 | 2 | 3:
+                    if "Mine" in self.currentOrders:
+                        print("Great job. The successful deployment of mines on your patrol is critical to victory.")
+                    elif "Abwehr" in self.currentOrders:
+                        print("Well done. The delivery of our agent onto enemy shores will hinder their war effort greatly.")
+                    elif self.sunkOnCurrentPatrol > 1:
+                        print("Excellent work. Your patrol was a success, sinking", self.sunkOnCurrentPatrol, "ships!")
+                    else:
+                        print("Good work, we know you can do better out there, but it's still a successful patrol.")
+                case 4 | 5 | 6:
+                    if "Mine" in self.currentOrders:
+                        print("The war effort has benefitted greatly from your successful mining of the target area.")
+                    elif "Abwehr" in self.currentOrders:
+                        print("Thanks to your successful mission, our agent is now able to feed us critical intelligence.")
+                    elif self.sunkOnCurrentPatrol > 1:
+                        print("A great patrol. By sinking", self.sunkOnCurrentPatrol, "ships, you've hindered the enemy's war effort drastically.")
+                    else:
+                        print("Nice job. A single ship sunk won't help us enough but keep at it.")
+            self.successfulPatrols += 1
+            self.unsuccessfulPatrolsInARow = 0
+            self.lastPatrolWasUnsuccessful = False
+        else:
+            if "Mine" in self.currentOrders:
+                print("Failure to mine the designated grid hinders our efforts at sea.")
+            elif "Abwehr" in self.currentOrders:
+                print("Failure to delivery our agent has hurt the war effort greatly.")
+            else:
+                print("Countless ships have managed to get by our patrols - we need to see improvement.")
+            self.unsuccessfulPatrols += 1
+            self.lastPatrolWasUnsuccessful = True
 
     def knightsCrossCheck(self):
         """Checks if the conditions for the NEXT knight's cross award is applicable, and awards it"""
@@ -1025,12 +1078,12 @@ class Game():
                         self.sub.minesLoadedAft = True
                     else:
                         print("Successfully deployed mines. Mission complete. Continuing patrol.")
-                        self.sunkOnCurrentPatrol += 1
+                        self.missionComplete = True
                     self.sub.reload()
                 #check to see if abwehr agent mission was success
                 if loc == "Mission" and "Abwehr" in self.currentOrders:
                     self.sub.crew_health["Abwehr Agent"] = -1
-                    self.sunkOnCurrentPatrol += 1
+                    self.missionComplete = True
                     print("We successfully land our agent on shore.")
                 #check if resupply was interrupted, if not, returns true
                 if resupply:
@@ -1051,27 +1104,27 @@ class Game():
                 print("We successfully refuel.")
                 toReturn = True
 
-        #check if torpedoes are available
-        torpedoSupplyRoll = d6Roll()
-        numToAdd = d6Roll()
-        if torpedoSupplyRoll == 1:
-            #receive steam torpedoes
-            numAdded = self.sub.addTorpedoes("G7a", numToAdd)
-            print("They were able to resupply us with", numAdded, "steam torpedoes!")
-        elif torpedoSupplyRoll == 2:
-            #receive electric torpedoes
-            numAdded = self.sub.addTorpedoes("G7e", numToAdd)
-            print("They were able to resupply us with", numAdded, "electric torpedoes!")
-        elif torpedoSupplyRoll == 3:
-            #receive 2 of each torpedoes
-            numAddedS = self.sub.addTorpedoes("G7a", 2)
-            numAddedE = self.sub.addTorpedoes("G7e", 2)
-            print("They were able to supply us with", numAddedS, "steam torpedoes and", numAddedE, "electric torpedoes!")
-        else:
-            print("The milk cow does not have any torpedoes it can provide us.")
+            #check if torpedoes are available
+            torpedoSupplyRoll = d6Roll()
+            numToAdd = d6Roll()
+            if torpedoSupplyRoll == 1:
+                #receive steam torpedoes
+                numAdded = self.sub.addTorpedoes("G7a", numToAdd)
+                print("They were able to resupply us with", numAdded, "steam torpedoes!")
+            elif torpedoSupplyRoll == 2:
+                #receive electric torpedoes
+                numAdded = self.sub.addTorpedoes("G7e", numToAdd)
+                print("They were able to resupply us with", numAdded, "electric torpedoes!")
+            elif torpedoSupplyRoll == 3:
+                #receive 2 of each torpedoes
+                numAddedS = self.sub.addTorpedoes("G7a", 2)
+                numAddedE = self.sub.addTorpedoes("G7e", 2)
+                print("They were able to supply us with", numAddedS, "steam torpedoes and", numAddedE, "electric torpedoes!")
+            else:
+                print("The milk cow does not have any torpedoes it can provide us.")
 
-        if toReturn == True:
-            self.advanceTime(1, True)
+            if toReturn == True:
+                self.advanceTime(1, True)
         return toReturn
 
     def encounterNone(self, loc):
@@ -1231,7 +1284,7 @@ class Game():
                     self.sub.crewInjury(self, "Torpedo Incident")
             case 11:
                 print("Severe storm - we must ride it out. We're not going to find anything out here for a while.")
-                self.weatherDuty = True
+                self.severeWeather = True
             case 12:
                 if "Caribbean" in self.currentOrders or "West African Coast" in self.currentOrders or "Mediterranean" in self.currentOrders:
                     print("Swim call! Everyone on deck for a relaxing swim.")
@@ -2108,7 +2161,9 @@ class Game():
                 print(ship[s].name, "has been sunk!")
                 self.shipsSunk.append(ship[s])
                 self.sunkOnCurrentPatrol += 1
-                time.sleep(3)
+                if "Minelaying" not in self.currentOrders and "Abwehr" not in self.currentOrders:
+                    self.missionComplete = True
+                time.sleep(2)
 
     def deckGunAttack(self, ship, r):
         """Attack called (already assumed to have at least one shot) for deck guns."""
