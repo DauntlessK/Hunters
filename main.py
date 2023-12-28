@@ -101,6 +101,9 @@ class Game():
             if "_" in self.kmdt:
                 print("Commas not allowed.")
                 continue
+            elif len(self.kmdt) > 32:
+                print("Name too long.")
+                continue
             else:
                 invalid = False
         self.id = getInputNum("Enter U-Boat #: ", 1, 9999)
@@ -213,49 +216,6 @@ class Game():
 
     def chooseSub(self, reassignment = False):
         """Gets input from player to choose Submarine Type"""
-        print("1. VIIA (Start date Sept-39)")
-        print("2. VIIB (Start date Sept-39)")
-        print("3. IXA (Start date Sept-39)")
-        print("4. IXB (Start date Apr-40)")
-        print("5. VIIC (Start date Oct-40)")
-        print("6. VIID (Start date Jan-42)")
-        print("7. Random U-Boat")
-        subChosen = getInputNum("Choose a U-Boat: ", 1, 7)
-        if subChosen == 7:
-            subChosen = random.randint(1,6)
-            #todo get random appropriate Uboat #?
-        match subChosen:
-            case 1:
-                self.date_month = 8
-                self.date_year = 1939
-                return "VIIA"
-            case 2:
-                self.date_month = 8
-                self.date_year = 1939
-                return "VIIB"
-            case 3:
-                self.date_month = 8
-                self.date_year = 1939
-                return "IXA"
-            case 4:
-                self.date_month = 3
-                self.date_year = 1940
-                return "IXB"
-            case 5:
-                self.date_month = 9
-                self.date_year = 1940
-                self.francePost = True
-                return "VIIC"
-            case 6:
-                self.date_month = 0
-                self.date_year = 1942
-                self.francePost = True
-                return "VIID"
-            case 8:
-                self.date_month = 4
-                self.date_year = 1943
-                self.francePost = True
-                return "VIIC Flak"
 
         if not reassignment:
             print("1. VIIA (Start date Sept-39)")
@@ -304,13 +264,13 @@ class Game():
             print("3. IXA")
             if (self.date_month > 3 and self.date_year == 1940) or self.date_year > 1940:
                 subsavail += 1
-                print("4. IXB (Start date Apr-40)")
+                print("4. IXB")
             if (self.date_month > 9 and self.date_year == 1940) or self.date_year > 1940:
                 subsavail += 1
-                print("5. VIIC (Start date Oct-40)")
+                print("5. VIIC")
             if self.date_year >= 1942:
                 subsavail += 1
-                print("6. VIID (Start date Jan-42)")
+                print("6. VIID")
             subChosen = getInputNum("Choose new U-Boat: ", 1, subsavail)
             match subChosen:
                 case 1:
@@ -544,7 +504,7 @@ class Game():
                     for key in self.sub.crew_health:
                         if self.sub.crew_health[key] == 2:
                             survivalRoll = d6Roll()
-                    for key in self.crew_health:
+                    for key in self.sub.crew_health:
                         if self.crew_health[key] == 2:
                             survivalRoll = d6Roll()
                             if survivalRoll >= 4:
@@ -561,6 +521,7 @@ class Game():
                 else:
                     print("Both Diesel engines are knocked out. We must scuttle the boat!")
                     scuttleFromDieselsInop(self)
+                    return 0
             elif (self.sub.dieselsInop() == 1 or self.sub.systems["Fuel Tanks"] == 2) and not self.abortingPatrol:
                 if self.sub.systems["Fuel Tanks"] == 2:
                     print("We must abort the patrol, our fuel tanks are damaged beyond repair.")
@@ -661,7 +622,7 @@ class Game():
         if refitTime == 0:
             self.pastSubs.append(self.id)
             self.id = random.randint(20,999)
-            toprinttext = "Repair and refit will take too long, BDU has reassigned you to U-" + self.id
+            toprinttext = "Repair and refit will take too long, BDU has reassigned you to U-" + str(self.id)
             print(toprinttext)
         else:
             self.advanceTime(refitTime)
@@ -719,9 +680,16 @@ class Game():
             print("You're eligible for reassignment to a new boat. Would you like to be reassigned?")
             if verifyYorN() == "Y":
                 self.pastSubs.append(self.id)
-                self.sub = self.chooseSub(True)
+                newsub = self.chooseSub(True)
+                self.sub2 = Submarine(newsub)
+
+                #move things over
+                self.sub2.crew_levels = self.sub.crew_levels
+                self.sub2.knightsCross = self.sub.knightsCross
+
+                self.sub = self.sub2
+                del self.sub2
                 self.id = random.randint(10,999)
-                #todo - Does crew move over? need to move crew over
                 reassigned = True
                 self.eligibleForNewBoat = False
                 toP = "You've been assigned to U-" + str(self.id)
@@ -756,6 +724,8 @@ class Game():
                 self.sub.setLastLoadout()
             else:
                 self.sub.torpedoResupply()
+        else:
+            self.sub.torpedoResupply()
 
     def knightsCrossCheck(self):
         """Checks if the conditions for the NEXT knight's cross award is applicable, and awards it"""
@@ -791,7 +761,7 @@ class Game():
         # in addition to above bonus, favorable -1 roll mod when firing (to hit)
         elif self.sub.knightsCross == 1:
             if totalTonnageSunk > 175000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 75000:
-                print("You've been awarded the Knight's Cross! Congratulations,",
+                print("You've been awarded the Knight's Cross with Oakleaves! Congratulations,",
                       self.rank[self.sub.crew_levels["Kommandant"]], self.kmdt)
                 self.sub.knightsCross = 2
                 self.capitalShipsSunkSinceLastKnightsCross = 0
@@ -803,7 +773,7 @@ class Game():
         # in addition to above bonuses, favorable -1 roll mod for escort detection
         elif self.sub.knightsCross == 2:
             if totalTonnageSunk > 200000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 75000:
-                print("You've been awarded the Knight's Cross! Congratulations,",
+                print("You've been awarded the Knight's Cross with Oakleaves and Swords! Congratulations,",
                       self.rank[self.sub.crew_levels["Kommandant"]], self.kmdt)
                 self.sub.knightsCross = 3
                 self.capitalShipsSunkSinceLastKnightsCross = 0
@@ -815,7 +785,7 @@ class Game():
         # in addition to above bonuses, following attempts are always successful
         elif self.sub.knightsCross == 3:
             if totalTonnageSunk > 300000 or self.capitalShipsSunkSinceLastKnightsCross > 0 or GRTSunkSinceLastKnightsCross > 50000:
-                print("You've been awarded the Knight's Cross! Congratulations,",
+                print("You've been awarded the Knight's Cross with Oakleaves, Swords, and Diamonds! Congratulations,",
                       self.rank[self.sub.crew_levels["Kommandant"]], self.kmdt)
                 self.sub.knightsCross = 4
                 self.capitalShipsSunkSinceLastKnightsCross = 0
@@ -1224,7 +1194,7 @@ class Game():
                 self.superiorTorpedoes = True
             case 6:
                 print("We meet a sister ship at sea.")
-                inopTotal = countOf(self.systems.values(), 2)
+                inopTotal = countOf(self.sub.systems.values(), 2)
                 count = 2
                 if inopTotal > 0 and inopTotal <= 2:
                     print("She's able to help with some repairs.")
@@ -2195,5 +2165,3 @@ class Game():
             time.sleep(3)
 
 Game()
-
-#list2 = insertNewScore("Sue", "U-21", "5", "242,500", "31", "55", "4", "Ded!")

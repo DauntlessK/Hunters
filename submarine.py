@@ -127,8 +127,7 @@ class Submarine():
         # used to roll against to get damage location on sub
         self.damageChart = ["Batteries", "flooding", "crew injury", "Periscope", "Dive Planes", "Electric Engine #1",
                             "flooding", "Electric Engine #2", "Diesel Engine #1", "Flak Guns", "Diesel Engine #2",
-                            "3.7 Flak",
-                            "flooding", "minor", "hull", "crew injury", "hull", "Deck Gun",
+                            "3.7 Flak", "flooding", "minor", "hull", "crew injury", "hull", "Deck Gun",
                             "hull", "Radio", "flooding", "flooding", "hull", "Flak Gun",
                             "flooding", "hull", "crew injury", "floodingx2", "hull", "Deck Gun",
                             "Hydrophones", "Aft Torpedo Doors", "crew injuryx2", "Forward Torpedo Doors", "hullx2",
@@ -631,7 +630,8 @@ class Submarine():
                             if verifyYorN() == "Y":
                                 game.halsUndBeinbruch -= 1
                                 continue
-                        self.systems.update({"3.7 Flak": 1})
+                        if self.systems["3.7 Flak"] != 2:
+                            self.systems.update({"3.7 Flak": 1})
                     else:
                         print("Flak gun has been hit!")
                         if game.halsUndBeinbruch > 0:
@@ -639,7 +639,8 @@ class Submarine():
                             if verifyYorN() == "Y":
                                 game.halsUndBeinbruch -= 1
                                 continue
-                    self.systems.update({"Flak Gun": 1})
+                    if self.systems["Flak Gun"] != 2:
+                        self.systems.update({"Flak Gun": 1})
                 case "minor":
                     print("Damage is minor, nothing to report!")
                 case _:
@@ -649,12 +650,9 @@ class Submarine():
                         if verifyYorN() == "Y":
                             game.halsUndBeinbruch -= 1
                             continue
-                    # TODO damageVariation = d6Roll()
-                    # match damageVariation:
-                    #     case 1:
-                    #         print("The" + self.systems[damage].key + "have taken damage!")
-                    #     case 2:
-                    self.systems.update({damage: 1})
+                    # TODO damageVariation text
+                    if self.systems[damage] != 2:
+                        self.systems.update({damage: 1})
 
         time.sleep(3)
         # check if flooding took place this round and roll for additional flooding chance

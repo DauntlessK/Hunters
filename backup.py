@@ -185,3 +185,5 @@ if self.fuel_tanks == 0:
         wep1 = input("How should we engage?\n1) Bow Torpedo Salvo\n2) Aft Torpedo Salvo")
     # TODO Need to validate engagement type (include in while loop?) TODO- need option for fore and aft salvo
     # TODO need to validate fore or aft torpedo doors, deck gun are not damaged / destroyed
+
+

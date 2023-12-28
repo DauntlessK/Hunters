@@ -1,5 +1,4 @@
-Otto Kertschmer_U-55_16_256,000_75_44_1_Captured after scuttling from depth charges by USS Ship
-Sue_U-21_5_242,500_31_55_4_Ded!
-Kyle BB_U-777_9_241,000_98_52_3_Survived - captured
-Bob2_U-21_5_130,500_31_55_4_Ded!
-John_U-990_0_0_3_27_0_Sunk Jan - 1942 by catastrophic damage done by depth charges from the HMS Bluebell while patrolling the mid-Atlantic
+Otto Kretschmer_U-99_16_273,000_75_40_4_0_0_Captured Mar - 1941 after scuttling from depth charges by HMS Walker while patrolling the British Isles
+Wolfgang Luth_U-181_15_225,700_75_46_1_0_0_Promoted to command of 22nd Training Flotilla
+Erich Topp_U-552_12_198,500_75_35_1_0_0_Promoted to command of 27th Training Flotilla
+Kyle BB_U-223_5_181400_108_21_1_25_0_Sunk Feb - 1941 by catastrophic damage done by depth charges from the HMS Godetia while patrolling the mid-Atlantic

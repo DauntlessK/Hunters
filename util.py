@@ -1,4 +1,5 @@
 import random
+import math
 from operator import *
 
 def d6Roll():
@@ -115,9 +116,10 @@ def scuttleFromDieselsInop(game):
         causeText = "Lost at sea", game.getFullDate(), "after scuttling the boat due to inoperative diesel engines"
         gameover(game, causeText)
     else:
-        print("Rescused! Get new Uboat")
-        print("TODO")
-        #todo
+        game.pastSubs.append(self.id)
+        game.id = random.randint(20, 999)
+        toprinttext = "You've been rescued at sea. On return, BDU has reassigned you to U-" + str(self.id)
+        print(toprinttext)
 
 
 def gameover(game, cause):
@@ -131,7 +133,7 @@ def gameover(game, cause):
     if len(game.pastSubs) > 0:
         toprint = "Other commands: "
         for x in range(len(game.pastSubs)):
-            if x == len(game.pastSubs):
+            if x == len(game.pastSubs) - 1:
                 toprint = toprint + "U-" + str(game.pastSubs[x])
             else:
                 toprint = toprint + "U-" + str(game.pastSubs[x]) + ", "
@@ -211,13 +213,17 @@ def gameover(game, cause):
     print(toprint)
 
     if game.sub.knightsCross > 0:
-        print("Awards:", game.sub.awardName[game.sub.knightsCross])
+        print("Awards:", game.awardName[game.sub.knightsCross])
     print("Patrols completed:", str(game.patrolNum - 1))
     #print("End date:", game.getFullDate)
     print("Ships sunk:", str(len(game.shipsSunk)))
     grtSunk = 0
+    warshipsSunk = 0
     for x in range (len(game.shipsSunk)):
         grtSunk += game.shipsSunk[x].GRT
+        if game.shipsSunk[x].hp == 5:
+            warshipsSunk += 1
+    print("Warships sunk:", str(warshipsSunk))
     grtSunkSTR = f"{grtSunk:,}"
     print("GRT sunk:", str(grtSunkSTR))
     print("Damage done:", str(game.damageDone))
@@ -225,7 +231,7 @@ def gameover(game, cause):
     print("Random Events:", str(game.randomEvents))
 
     fate = cause + whilePatrolling
-    insertNewScore(game.kmdt, game.getFullUboatID(), str(game.patrolNum - 1), str(grtSunk), str(game.damageDone), str(game.hitsTaken), str(game.randomEvents), fate)
+    insertNewScore(game.kmdt, game.getFullUboatID(), str(game.patrolNum - 1), str(grtSunk), str(game.damageDone), str(len(game.shipsSunk)), str(warshipsSunk), str(game.hitsTaken), str(game.randomEvents), fate)
 
     print("Result: ", end="")
     if "Captured" in cause:
@@ -259,6 +265,9 @@ def gameover(game, cause):
         else:
             print("You were the scourge of the seas and the pride of the entire Kriegsmarine. Your legendary exploits place you at the top of the U-Boat elite and are mentioned prominently in propaganda efforts.")
 
+    print("\n")
+    printTable()
+
     raise SystemExit
 
 #-----------------------------------------------SCORE RECORDING
@@ -270,13 +279,13 @@ def createScoreArray():
 
         for x in range (len(lines)):
             y = lines[x].split("_")
-            y[7] = y[7].replace("\n", "")
-            newEntry = addScore(y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7])
+            y[9] = y[9].replace("\n", "")
+            newEntry = addScore(y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7], y[8], y[9])
             scoreList.append(newEntry)
 
         return scoreList
 
-def addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
+def addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate):
 
     newDictEntry = {
                 "NAME" : name,
@@ -284,13 +293,15 @@ def addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
                 "PATROLS" : patrols,
                 "GRT" : GRT,
                 "DAMAGE DONE" : damageDone,
+                "SS" : SS,
+                "WS" : WS,
                 "HITS TAKEN" : hitsTaken,
                 "RAN" : ran,
                 "FATE" : fate
             }
     return newDictEntry
 
-def insertNewScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
+def insertNewScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate):
 
     newList = []
     notInserted = True
@@ -311,14 +322,14 @@ def insertNewScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate):
             print("Error creating original GRT int")
 
         if GRTINT > origGRT and notInserted:
-            toAdd = addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate)
+            toAdd = addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate)
             newList.append(toAdd)
             notInserted = False
 
         newList.append(originalList[x])
     #add for very end of list
     if notInserted:
-        toAdd = addScore(name, uboat, patrols, GRT, damageDone, hitsTaken, ran, fate)
+        toAdd = addScore(name, uboat, patrols, GRT, damageDone, SS, WS, hitsTaken, ran, fate)
         newList.append(toAdd)
 
     writeNewScores(newList)
@@ -333,3 +344,49 @@ def writeNewScores(listOfScores):
             else:
                 if x != len(listOfScores) - 1:
                     f.write("\n")
+
+def printTable():
+    scoreList = createScoreArray()
+
+    #print table header
+    print("———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————")
+    print("  #  |           CAPTAIN NAME          |  U-BOAT   |  PATROLS  |    GRT    | DAMAGE DONE | SS  | WS  |  HITS TAKEN | RAN |                            FATE")
+    #COLUMN SPACING: 5 RANK, 33 NAME, 11 UBOAT, 11 PATROLS, 11 GRT, 13 DAMAGE DONE, 13 HITS TAKEN, 5 RE, 12+ FATE
+    print("———————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————")
+    for x in range (len(scoreList)):
+        printColumn(5, str(x+1))
+        printColumn(33, scoreList[x]["NAME"])
+        printColumn(11, scoreList[x]["U-BOAT"])
+        printColumn(11, scoreList[x]["PATROLS"])
+        printColumn(11, scoreList[x]["GRT"])
+        printColumn(13, scoreList[x]["DAMAGE DONE"])
+        printColumn(5, scoreList[x]["SS"])
+        printColumn(5, scoreList[x]["WS"])
+        printColumn(13, scoreList[x]["HITS TAKEN"])
+        printColumn(5, scoreList[x]["RAN"])
+        printColumn(150, scoreList[x]["FATE"], True)
+
+
+def printColumn(totalWidth, toPrint, fate = False):
+    midpoint = int(math.ceil(totalWidth / 2))
+    middleOfToPrint = int(math.ceil(len(toPrint) / 2))
+    totalSpaces = totalWidth - len(toPrint)
+    spacesOnLeft = totalSpaces / 2
+    spacesOnRight = totalSpaces / 2
+
+    if spacesOnLeft % 2 != 0:
+        spacesOnLeft = math.floor(spacesOnLeft)
+    if spacesOnRight % 2 != 0:
+        spacesOnRight = math.ceil(spacesOnRight)
+
+    spacesOnLeft = int(spacesOnLeft)
+    spacesOnRight = int(spacesOnRight)
+
+    for x in range (spacesOnLeft):
+        print(" ", end="")
+    print(toPrint, end="")
+
+    if not fate:
+        for x in range(spacesOnRight):
+            print(" ", end="")
+        print("|", end="")
