@@ -17,12 +17,8 @@ from util import *
 
 
 #BUGS SEEN----
-#following damaged ship went straight to next box prompt
-#followed convoy instead of damaged ship and went to next box, no message
 #mission loop (deploying mines)
 #did not deploy aft mines
-#following after early (close) detection may result in losing escort
-#did 2 damage with VII deck gun
 
 class Game():
 
@@ -100,7 +96,7 @@ class Game():
             if "_" in self.kmdt:
                 print("Underscores not allowed.")
                 continue
-            elif len(self.kmdt) > 27:
+            elif len(self.kmdt) > 25:
                 print("Name too long.")
                 continue
             else:
@@ -730,6 +726,7 @@ class Game():
         flavorText1 = d6Roll()
         flavorText2 = d6Roll()
         print("====================================================")
+        print(self.sunkOnCurrentPatrol)
         damagedTotal = countOf(self.sub.systems.values(), 1)
         if self.sub.hull_Damage >= 6:
             returnMessage = "U-" + str(self.id) + " slowly moves into the bay, barely afloat. A tug is needed to help you in."
@@ -1441,6 +1438,7 @@ class Game():
         #check if lost contact from changing from night to day
         if lostthem == "Lost Them":
             print("We lost them!")
+
         #check if all ships aside from escorts have been sunk (end of combat)
         elif (shipsSunk == len(ship) - 1 and ship[0].type == "Escort") or shipsSunk == len(ship):
             if enc == "Convoy":
@@ -1513,7 +1511,7 @@ class Game():
                                 else:
                                     print("Unable to follow the contact!")
                     #one damaged ship
-                    else:
+                    elif shipsDamaged == 1:
                         if Escorted(ship):
                             followRoll = d6Roll()
                             if followRoll <= 4 or self.sub.knightsCross == 4:
@@ -1537,8 +1535,14 @@ class Game():
                             else:
                                 print("Closing to attack again!")
                                 self.encounterAttack(enc, ship)
+                    else: #no damaged ships - should trigger after an early detection and attempt to follow with same exact enc and existing ship array- should not trigger at any other point
+                        followRoll = d6Roll()
+                        if followRoll <= 4 or self.sub.knightsCross == 4:
+                            self.encounterAttack(enc, ship)
+                        else:
+                            print("We weren't able to follow.")
 
-        time.sleep(3)
+        time.sleep(2)
 
     def followFlow(self, ship):
         """Prompts and displays for following damaged ship(s) --- ONLY damaged ships, aka automatic follow"""
@@ -1677,7 +1681,7 @@ class Game():
                 escortMods += 1
             if attackDepth == "Surfaced" and timeOfDay == "Night" and self.getYear() >= 1941:
                 escortMods += 1
-            if firedFandA:
+            if firedFandA and not previouslyDetected:
                 escortMods += 1
             if range == 6:
                 escortMods -= 1
@@ -1951,7 +1955,8 @@ class Game():
                 shipsDamaged += 1
 
         #check for further attacks in same round for unescorted targets
-        if not Escorted(ship) and shipsSunk != len(ship):
+        didAttackSecondTime = False
+        if not Escorted(ship) and shipsSunk != len(ship) and not detectedOnClose:
             print("Should we make another attack?")
             if verifyYorN() == "Y":
                 self.getAttackType(ship, depth, timeOfDay, r)

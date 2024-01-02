@@ -695,8 +695,8 @@ class Submarine():
         return numInOp
 
     def printStatus(self):
-        print("Current damage/HP: ", self.hull_Damage, "/", self.hull_hp)
-        print("Current flooding/HP ", self.flooding_Damage, "/", self.flooding_hp)
+        print("Current damage/HP:   ", self.hull_Damage, "/", self.hull_hp)
+        print("Current flooding/HP: ", self.flooding_Damage, "/", self.flooding_hp)
         #check if any damaged systems, then print list
         damagedTotal = countOf(self.systems.values(), 1)
         count = 0
