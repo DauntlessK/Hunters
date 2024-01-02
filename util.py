@@ -13,11 +13,12 @@ def d6Rollx2():
     roll = d6Roll() + d6Roll()
     return roll
 
-def verifyYorN():
+def verifyYorN(prompt):
     """Input prompt for a Yes or No response. Returns 'Y' or 'N' string, otherwise loops endlessly"""
     notVerified = True
     while notVerified:
-        inp = getInputNum("1) Yes\n2) No ", 1, 2)
+        print(prompt)
+        inp = getInputNum("1) Yes\n2) No ", 1, 2, prompt)
         match inp:
             case 1:
                 return "Y"
@@ -56,11 +57,17 @@ def printRollandMods(rollFor, roll, mods):
         toPrint = rollFor + " " + str(total) + " || Roll: " + str(roll) + " • Mods: +" + str(mods)
     print(toPrint)
 
-def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
+def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100, secondPrompt = ""):
     invalidInput = True
     while invalidInput:
         print(prompt, end="")
         inp = input()
+        if inp == "?":
+            if secondPrompt != "":
+                helpText(secondPrompt)
+            else:
+                helpText(prompt)
+            continue
         try:
             inp = int(inp)
         except:
@@ -79,13 +86,22 @@ def Escorted(ships):
         return True
     else:
         return False
+
 def scuttleFromFlooding(game, attacker, airAttack):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
-    scuttleRoll = d6Rollx2(game)
+    scuttleRoll = d6Rollx2()
     scuttleDRM = 0
     if game.sub.crew_health["Kommandant"] == 2:
         scuttleDRM += 1
     printRollandMods("Scuttle roll (11-):", scuttleRoll, scuttleDRM)
+
+    #check to see if unspent luck and didn't successfully scuttle
+    while game.halsUndBeinbruch > 0 and scuttleRoll + scuttleDRM > 11:
+        print("Your luck that did not save your boat helps you instead re-attempt scuttling!")
+        game.halsUndBeinbruch -= 1
+        scuttleRoll = d6Rollx2()
+        printRollandMods("Scuttle reroll (11-):", scuttleRoll, scuttleDRM)
+
     if scuttleRoll + scuttleDRM <= 11:
         if airAttack:
             print("Successfully scuttled. The U-boat slips under the waves.")
@@ -108,11 +124,19 @@ def scuttleFromFlooding(game, attacker, airAttack):
 
 def scuttleFromDieselsInop(game):
     print("Emergency blow ballast! Attempting to abandon ship and scuttle the boat.")
-    radioRoll = d6Rollx2(game)
+    radioRoll = d6Rollx2()
     radioDRM = 0
     if game.sub.systems["Radio"] >= 2:
         radioDRM += 4
-    printRollandMods(radioRoll, radioDRM)
+    printRollandMods("Roll to see if rescued at sea (11-):", radioRoll, radioDRM)
+
+    #check to see if luck and needs aving
+    while game.halsUndBeinbruch > 0 and radioRoll + radioDRM >= 11:
+        print("Your luck that did not save your boat helps you instead re-attempt scuttling!")
+        game.halsUndBeinbruch -= 1
+        radioRoll = d6Rollx2()
+        printRollandMods("Reroll to see if rescued at sea (11-):", radioRoll, radioDRM)
+
     if radioRoll + radioDRM >= 11:
         causeText = "Lost at sea", game.getFullDate(), "after scuttling the boat due to inoperative diesel engines"
         gameover(game, causeText)
@@ -407,3 +431,144 @@ def printColumn(totalWidth, toPrint, fate = False):
         print("|", end="")
     else:
         print("")
+
+#============================================= HELP PROMPT
+
+def helpText(prompt):
+    match prompt:
+        case "Enter U-Boat #: ":
+            print("---All U-Boats were indentified by a number. For example, U-95. Choose a number between 1 and 9999.")
+        case "Choose a U-Boat: ":
+            print("---The two main types of U-Boats during the war were type VII and type IX boats with some differences in variants.")
+            print("---Choosing a boat also determines the start date of your campaign.")
+            print("---Type VII boats were the workhorse of the Kriegsmarine. Very versatile and deadly.")
+            print("---Type IX boats were larger and less common. They had greater range (and thus longer patrols) at the expense of less overall number of patrols compared to VII boats.")
+        case "Choose new U-Boat: ":
+            print("---You've been given a reassignment opportunity to move into a new boat of the same type. This is your chance to get into a newer variant of boat.")
+        case "Pick your orders: " | "PATROL ASSIGNMENT: Roll to choose next patrol? ":
+            print("---If you're lucky (and with high rank, you're more likely to be lucky) you can choose your next patrol assignment.")
+            print("---The ability to choose your assignment lets you weed out unfavorable patrol orders at the very least.")
+        case "Follow damaged ship(s) or the convoy?\n1) Damaged Ships\n2) Convoy":
+            print("---Choose if you'd like to ATTEMPT to follow the convoy (which generates a new set of 4 ships if successful) or follow the damaged ship(s)")
+            print("---Following damaged ships is always guaranteed. Any escort (if present) may or may not remain with damaged ship.")
+        case "Follow damaged ship(s) or the rest?\n1) Damaged Ship(s)\n2) Undamaged Ship(s)":
+            print("---Choose if you'd like to ATTEMPT to follow the undamaged ship(s) or follow the damaged ship(s)")
+            print("---Following damaged ships is always guaranteed. Any escort (if present) may or may not remain with damaged ship.")
+        case "Select ship to follow: ":
+            print("---Choose specifically which ship to pursue and attack again.")
+        case "Do you wish to attack: \n1) Surfaced\n2) Submerged ":
+            print("---Attacking from the surface gives you a slight advantage (-1) to hit because your crew can use the UZO to fire from.")
+            print("---The disadvantage is that with escorts present, you will not be able to dive to test depth on the first round of attacks from escorts.")
+            print("---In addition, in later years (1941+), enemy radar has improved enough that it actually makes it a bit easier to detect and attack you.")
+        case "Choose Range:\n1) -WARNING ESCORT- Close\n2) Medium Range\n3) Long Range ":
+            print("---Attacking at closer range makes it more likely to hit. At close range, a hit is 2D6 roll of 8 or less, before modifiers.")
+            print("---However, at close range the escort has a chance to detect you (10+) before you even get your torpedoes off thus ruining this attack.")
+            print("---Not to mention, at close range escorts will have an easier time finding you to drop depth charges. Conversely at long range they will have a harder time.")
+            print("---Finally, electric (G7e) torpedoes struggle at longer ranges and are less likely to hit beyond close range.")
+        case "Choose Range:\n1) Close\n2) Medium Range\n3) Long Range ":
+            print("---Attacking at closer range makes it more likely to hit. At close range, a hit is 2D6 roll of 8 or less, before modifiers.")
+            print("---Electric (G7e) torpedoes struggle at longer ranges and are less likely to hit beyond close range.")
+        case "Enter ship # from above to target. Enter 0 if done attacking. ":
+            print("---Choose which ship to assign torpedoes to fire at. Order does not matter.")
+        case "Fire how many G7a torpedoes? ":
+            print("---Choose how many steam (G7a) torpedoes to fire at the target.")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+            print("---Each torpedo, if it hits and is not a dud, has a chance of doing between 1 and 4 damage.")
+            print("---Ships with less than 5k GRT have 2HP. Ships with 5001-9999 GRT have 3HP. Ships with 10k+ have 4HP. Capital ships have 5 HP.")
+        case "Fire how many G7e torpedoes? ":
+            print("---Choose how many steam (G7a) torpedoes to fire at the target.")
+            print("---Electric torpedoes are less reliable than steam until later in the war (mid-1940+) and suffer increased issues at medium and especially long ranges.")
+            print("---Their advantage is that if fired during the day, escorts will have an harder time finding the sub compared to firing steam torpedoes.")
+            print("---Each torpedo, if it hits and is not a dud, has a chance of doing between 1 and 4 damage.")
+            print("---Ships with less than 5k GRT have 2HP. Ships with 5001-9999 GRT have 3HP. Ships with 10k+ have 4HP. Capital ships have 5 HP.")
+        case "Number of shots to fire (1 or 2)":
+            print("---Choose how much ammo to consume for the deck gun attack. Up to two can be consumed per attack round / turn.")
+            print("---Technically, each ammo represents ~25 shots from the deck gun but is abstracted a bit in game.")
+            print("---Each 'shot' has a chance, if hit, to do 1 or 2 damage.")
+            print("---Ships with less than 5k GRT have 2HP. Ships with 5001-9999 GRT have 3HP. Ships with 10k+ have 4HP. Capital ships have 5 HP.")
+        case "Current # of steam torpedoes to add. 0 - 1: " | "Current # of steam torpedoes to add. 0 - 2: "  | "Current # of steam torpedoes to add. 0 - 3: "  | "Current # of steam torpedoes to add. 0 - 4: " | "Current # of steam torpedoes to add. 0 - 5: ":
+            print("---All U-Boats have a specific loadout of X number of G7a (steam) torpedoes and Y number of G7e (electric) torpedoes.")
+            print("---Depending on the type, you can get a certain amount more of one type or another (based on the spread). This will reduce the number of the other torpedo type.")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+            print("---Electric torpedoes are less reliable than steam until later in the war (mid-1940+) and suffer increased issues at medium and especially long ranges.")
+            print("---Their advantage is that if fired during the day, escorts will have an harder time finding the sub compared to firing steam torpedoes.")
+        case "Current # of electric torpedoes to add. 0 - ":
+            print("---All U-Boats have a specific loadout of X number of G7a (steam) torpedoes and Y number of G7e (electric) torpedoes.")
+            print("---Depending on the type, you can get a certain amount more of one type or another (based on the spread). This will reduce the number of the other torpedo type.")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+            print("---Electric torpedoes are less reliable than steam until later in the war (mid-1940+) and suffer increased issues at medium and especially long ranges.")
+            print("---Their advantage is that if fired during the day, escorts will have an harder time finding the sub compared to firing steam torpedoes.")
+        case "Enter # of G7a steam torpedoes to load in the forward tubes: ":
+            print("---This is the number of steam torpedoes to be loaded and will be ready to fire from the forward tubes at the next engagement.")
+            print("---Entering a number less than the total tubes will mean the rest are loaded with electric type.")
+            print("---Note: If you're loading during rearm at port, these are liable to be removed completely if you're assigned a minelaying mission (mines will take their place.)")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+        case "Enter # of G7a steam torpedoes to load in the aft tube(s): ":
+            print("---This is the number of steam torpedoes to be loaded and will be ready to fire from the aft tube(s) at the next engagement.")
+            print("---Entering a number less than the total tubes will mean the rest are loaded with electric type.")
+            print("---Note: If you're loading during rearm at port, these are liable to be removed completely if you're assigned a minelaying mission (mines will take their place.)")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+        case "Enter # of G7a to load into the aft reserves: ":
+            print("---This determines how many steam torpedoes will be placed in the aft reloads.")
+            print("---Entering a number less than the total aft reserves will mean the rest are loaded with electric type.")
+            print("---Steam torpedoes are more reliable (less dud rates than electric) and do not suffer range penalties.")
+            print("---Their disadvantage is that if fired during the day, escorts will have an easier time finding the sub thanks to the steam of bubbles they leave on their way to the target.")
+        case "1) Continue\n2) Stores Report\n3) Damage Report ":
+            print("---Decide your next action.")
+            print("---Continue moves you to the next box in your patrol, continuing onwards in your mission where you may or may not meet enemy ships.")
+            print("---Your stores report allows you to take a look at all of the ammunition on the ship- what is loaded and still left in reserve in terms of torpedoes and gun ammunition.")
+            print("---Damage report gives you a look at the state of your boat. What is and is not working, the hull condition, and the state of your crew members.")
+        case "1) Continue\n2) Stores Report\n3) Damage Report\n4) Abort Patrol ":
+            print("---Decide your next action.")
+            print("---Continue moves you to the next box in your patrol, continuing onwards in your mission where you may or may not meet enemy ships.")
+            print("---Your stores report allows you to take a look at all of the ammunition on the ship- what is loaded and still left in reserve in terms of torpedoes and gun ammunition.")
+            print("---Damage report gives you a look at the state of your boat. What is and is not working, the hull condition, and the state of your crew members.")
+            print("---Aborting your patrol turns your boat around to head back to port. This is not an automatic unsuccessful patrol.")
+            print("---By aborting (because you are out of ammo or too damaged to complete the patrol), you are moved 2 spaces from port.")
+        case "You can spend some luck to reroll the promotion roll. Spend luck? ":
+            print("---You can spend a Hals und Beinbruch luck token to reroll your promotion roll.")
+        case "You're eligible for reassignment to a new boat. Would you like to be reassigned? ":
+            print("---You can choose not to spend your reassignment (instead wait for the preferred U-Boat type to become available)")
+            print("---Reassignment allows you to move you and your crew to a new U-Boat of the same base type (VIIA -> VIIC)")
+        case "Use same loadout as previous patrol? ":
+            print("---This avoids going through setting up your U-Boat with the specific torpedo-type loadout.")
+            print("---It loads the same torpedoes types into the same locations as your previous patrol.")
+        case "Repair System? ":
+            print("---You have gotten lucky and your sister ship has a limited number of repairs to help you out.")
+            print("---Choose which system you'd like to have repaired back to working order.")
+        case "Do you wish to attack? ":
+            print("---You are able to determine whether it's worth the risk to attack or not.")
+            print("---Some targets, especially small escorted ships, are not worth the risk, or worth the expenditure of torpedoes / ammo.")
+        case "Attempt to follow convoy? ":
+            print("---You can try to follow the convoy on a D6 roll of 4 or less.")
+            print("---If successful, a new attack round will begin. This generates a new set of 4 ships to engage.")
+        case "Follow target(s) to make another attack? ":
+            print("---You can try to follow undamaged target(s) on a D6 roll of 4 or less.")
+            print("---If there are damaged ships and undamaged ships, you will have to choose which to follow.")
+            print("---Following damaged ships is always successful, while following undamaged capital ships is impossible.")
+        case "Dive to test depth? ":
+            print("---You can increase your odds at escape by diving extremely deep for 1 round of enemy attacks. Doing so gives you a -1 to detection odds.")
+            print("---Doing so puts strain on your hull and automatically incurs 1 hull damage.")
+            print("---In addition, you must roll to see if the boat can withstand the pressure of the deep dive.")
+            print("---With more and more hull damage, the liklihood of a horrific implosion death increases. ")
+        case "Do you wish to continue the attack at night? " | "Do you wish to continue the during the day? ":
+            print("---You are presented with the option of attacking now, or waiting to flip from day to night or vice versa.")
+            print("---Waiting runs the risk of losing your target. On a D6 roll of 5+ you lose your target.")
+            print("---Attacking during the day is riskier and requires you to be submerged. Attacking with steam (G7a) torpedoes during the day makes it a bit easier for escorts to hunt you.")
+            print("---Attacking at night allows you to attack surfaced or submerged. Attacking from the surface makes it slightly easier to hit targets with torpedoes but can be riskier.")
+            print("---From the surface you cannot dive to test depth fast enough, so that option is unavailable the first round. Additionally radar (Available to the enemy 1941+) makes you easier to detect.")
+        case "Should we make another attack? ":
+            print("---You can make multiple attacks within the same round on unescorted targets. They must be different attack types, however.")
+            print("---If you still haven't sunk your target(s) within the max 3 rounds (assuming 1 forward torpedo salvo, 1 aft torpedo salvo, and 1 deck gun attack), you will have the option to follow the target to make another attack.")
+            print("---Unescorted targets may be able to call for assistance - this will result in escorts or planes showing up to attack you.")
+        case "Reroll damage? ":
+            print("---Thanks to your Hals und Beinbruch luck, you have the opportunity to reroll this damage roll.")
+            print("---This helps you avoid especially crippling damage rolls.")
+        case "Spend some luck to reroll the injury? ":
+            print("---Thanks to your Hals und Beinbruch luck, you have the opportunity to reroll this injury roll.")
+            print("---This helps you avoid especially crippling injury rolls.")
