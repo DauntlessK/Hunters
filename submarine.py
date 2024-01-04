@@ -206,6 +206,8 @@ class Submarine():
         self.reloads_forward_G7e = 0
         self.reloads_aft_G7a = 0
         self.reloads_aft_G7e = 0
+        self.minesLoadedForward = False
+        self.minesLoadedAft = False
 
         print("Submarine Resupply - You are given", self.G7aStarting, "steam (G7a) and", self.G7eStarting, "electric (G7e) torpedoes.")
         print("You can adjust this ratio by ", self.torpedo_type_spread, "torpedo(es).")
@@ -260,6 +262,8 @@ class Submarine():
 
     def setLastLoadout(self):
         """Call to skip the torpedo resupply prompts to set the loadout to the loadout used in the previous patrol"""
+        self.minesLoadedForward = False
+        self.minesLoadedAft = False
         self.forward_G7a = self.lastLoadoutForward_G7a
         self.forward_G7e = self.lastLoadoutForward_G7e
         self.aft_G7a = self.lastLoadoutAft_G7a

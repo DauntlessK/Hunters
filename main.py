@@ -17,6 +17,20 @@ from util import *
 #BUGS SEEN----
 #promotion check mods don't seem to be working?
 
+def mainMenu():
+    print("Welcome to The Hunters: German U-Boats at War, 1939-43")
+    print("-Programmed by Kyle BB-")
+    print("To play, please ensure you own a copy of the GMT game.")
+    print("Instructions: Follow prompts- 99% of the game is simple input in the form of entering a number.")
+    print("You can type a question mark (?) in any prompt instead to get a few helpful, relevant explanations.")
+    time.sleep(3)
+    print("===========================================")
+    act = getInputNum("1) Play Game\n2) High Scores", 1, 2)
+    if act == 1:
+        Game()
+    elif act == 2:
+        printTable()
+
 
 class Game():
 
@@ -43,7 +57,6 @@ class Game():
         self.patrolNum = 1
         self.missionComplete = False
         self.successfulPatrols = 0
-        self.unsuccessfulPatrols = 0
         self.unsuccessfulPatrolsInARow = 0
         self.eligibleForNewUboat = False
         self.lastPatrolWasUnsuccessful = False
@@ -71,19 +84,8 @@ class Game():
         self.hitsTaken = 0
         self.randomEvents = 0
         self.pastSubs = []
-        self.gameStartText()
         self.startGame()
         self.gameloop()
-
-    def gameStartText(self):
-        """Pre-game introductory text"""
-        print("Welcome to The Hunters: German U-Boats at War, 1939-43")
-        print("-Programmed by Kyle BB-")
-        print("To play, please ensure you own a copy of the GMT game.")
-        print("Instructions: Follow prompts- 99% of the game is simple input in the form of entering a number.")
-        print("You can type a question mark (?) in any prompt instead to get a few helpful, relevant explanations.")
-        time.sleep(3)
-        print("===========================================")
 
     def startGame(self):
 
@@ -226,8 +228,8 @@ class Game():
         if not reassignment:
             print("1. VIIA (Start date Sept-39)")
             print("2. VIIB (Start date Sept-39)")
-            print("3. IXA (Start date Sept-39)")
-            print("4. IXB (Start date Apr-40)")
+            print("3. IXA  (Start date Sept-39)")
+            print("4. IXB  (Start date Apr-40)")
             print("5. VIIC (Start date Oct-40)")
             print("6. VIID (Start date Jan-42)")
             subChosen = getInputNum("Choose a U-Boat: ", 1, 6)
@@ -542,16 +544,25 @@ class Game():
 
             self.printPatrolStatus(currentBoxName, x)
 
-            #check if on weather duty (skips current box)
-            if self.weatherDuty and (x < len(self.patrolArray) - 2 or x < len(self.patrolArray) - 1):
-                self.weatherDuty = False
-                print("Sending weather reports.")
-                x += 1
-                continue
-            if self.severeWeather and (x < len(self.patrolArray) - 2 or x < len(self.patrolArray) - 1):
-                print("We ride out the storm for a while and finally the storm abates.")
-                x += 1
-                continue
+            #check if on weather duty or severe weather random events... (skips current box)
+            if self.weatherDuty:
+                #skip if on mine or abwehr duties and in mission box (delay skipping of box until next)
+                if currentBoxName == "Mission":
+                    print("Approaching mission location, we will delay sending our weather reports.")
+                elif (x < len(self.patrolArray) - 2) or (x < len(self.patrolArray) - 1):
+                    self.weatherDuty = False
+                    print("Sending weather reports.")
+                    x += 1
+                    continue
+            if self.severeWeather:
+                if currentBoxName == "Mission":
+                    print("Approaching mission location, despite the severe storm.")
+                    self.severeWeather = False
+                elif (x < len(self.patrolArray) - 2 or x < len(self.patrolArray) - 1):
+                    print("We ride out the storm for a while and finally the storm abates.")
+                    self.severeWeather = False
+                    x += 1
+                    continue
 
             #skip first iteration of asking for action (on departure)- otherwise ask for next action before making roll
             if x == 1:
@@ -636,6 +647,20 @@ class Game():
         else:
             self.advanceTime(1)
 
+        #determine if mission was completed for patrol and adjust mission counts
+        if self.missionComplete:
+            self.successfulPatrols += 1
+            self.unsuccessfulPatrolsInARow = 0
+            self.lastPatrolWasUnsuccessful = False
+        if self.missionComplete == False:
+            self.lastPatrolWasUnsuccessful = True
+            self.unsuccessfulPatrolsSinceLastPromotionCheck += 1
+            self.unsuccessfulPatrolsInARow += 1
+            if self.unsuccessfulPatrolsInARow == 3:
+                self.sub.crew_levels["Crew"] = self.sub.crew_levels["Crew"] - 1
+                if self.sub.crew_levels["Crew"] < 0:
+                    self.sub.crew_levels["Crew"] = 0
+
         #ensure no abwehr agent is aboard
         self.sub.crew_health["Abwehr Agent"] = -1
         #reset superior Torpedoes
@@ -676,15 +701,6 @@ class Game():
                 print("Watch Officer 1 has been promoted to captain a new boat. You have received a replacement 1WO.")
                 self.sub.crew_levels["Watch Officer 1"] = 0
 
-        #Report of total ships and tonnage sunk to date
-        #determine if 3 unsuccessful patrols were made in a row
-        if self.lastPatrolWasUnsuccessful:
-            self.unsuccessfulPatrolsInARow += 1
-            if self.unsuccessfulPatrolsInARow == 3:
-                self.sub.crew_levels["Crew"] = self.sub.crew_levels["Crew"] - 1
-                if self.sub.crew_levels["Crew"] < 0:
-                    self.sub.crew_levels["Crew"] = 0
-
         self.knightsCrossCheck()
         reassigned = False
         if self.eligibleForNewBoat:
@@ -714,11 +730,7 @@ class Game():
         else:
             print("You've made", str(self.patrolNum), "patrol and sunk", str(len(self.shipsSunk)), "ships totaling",
                   totalTonnage, "tons.")
-        # for x in range(len(self.shipsSunk)):
-        #     if x+1 != len(self.shipsSunk):
-        #         print(self.shipsSunk[x], end=", ")
-        #     else:
-        #         print(self.shipsSunk[x])
+
         if self.sub.knightsCross > 0:
             print("Awards: ", end="")
             print(self.awardName[self.sub.knightsCross])
@@ -799,9 +811,6 @@ class Game():
                         print("With", len(self.shipsSunkOnCurrentPatrol), "less enemy ships, you've hurt the enemy's capabilities to continue the war.")
                     else:
                         print("BDU would like to see you sink more than a single ship per patrol. Get back out there and get some more.")
-            self.successfulPatrols += 1
-            self.unsuccessfulPatrolsInARow = 0
-            self.lastPatrolWasUnsuccessful = False
         else:
             if "Mine" in self.currentOrders:
                 print("Failure to mine the designated grid hinders our efforts at sea.")
@@ -809,8 +818,6 @@ class Game():
                 print("Failure to delivery our agent has hurt the war effort greatly.")
             else:
                 print("Countless ships have managed to get by our patrols - we need to see improvement.")
-            self.unsuccessfulPatrols += 1
-            self.lastPatrolWasUnsuccessful = True
 
     def knightsCrossCheck(self):
         """Checks if the conditions for the NEXT knight's cross award is applicable, and awards it"""
@@ -888,6 +895,8 @@ class Game():
 
         # First check if random event (natural 12)
         if roll == 12 and randomEvent == False and loc != "Additional Round of Combat" and loc != "Mission":
+            print("RANDOM EVENT!")
+            time.sleep(2)
             self.encounterRandomEvent()
             self.randomEvent = True
             return "Random Event"
@@ -1487,7 +1496,7 @@ class Game():
             return "exit"
 
         #check if diesel engines were knocked out during fight
-        if self.sub.dieselsInop() > 0:
+        if self.sub.dieselsInop() > 0 or self.sub.systems["Fuel Tanks"] == 2:
             return "exit"
 
         #check if all ships aside from escorts have been sunk (end of combat)
@@ -2284,4 +2293,4 @@ class Game():
                 self.missionComplete = True
         time.sleep(2)
 
-Game()
+mainMenu()
