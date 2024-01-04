@@ -500,6 +500,14 @@ class Submarine():
         """Performs the dive to test depth. Giving 1 damage then checking to see if further damage is incurred. Can
         recrusively call itself if damage continues."""
         self.hull_Damage = self.hull_Damage + 1
+
+        #check to see if that destroys the boat
+        if self.hull_Damage >= self.hull_hp:
+            print("The depths are too much for your boat...")
+            time.sleep(2)
+            gameoverText = "Crushed by the depths " + game.getFullDate() + " escaping depth charges from " + escortName
+            gameover(game, gameoverText)
+
         crushdamage = d6Rollx2()
         print("Depth damage roll: ", crushdamage)
 
@@ -542,6 +550,7 @@ class Submarine():
             attackMods += 2
 
         print("Taking damage!")
+        time.sleep(1)
         #printRollandMods(attackRoll, attackMods)
 
         while attackRoll + attackMods >= 13 and game.halsUndBeinbruch > 0:
@@ -554,21 +563,27 @@ class Submarine():
                 print("Their depth charges were ineffective!")
             case 4 | 5 | 6:
                 print("1 hit on the sub!")
+                time.sleep(1)
                 self.damage(game, 1, attackerName, airAttack)
             case 7 | 8:
                 print("2 hits on the sub!")
+                time.sleep(1)
                 self.damage(game, 2, attackerName, airAttack)
             case 9 | 10:
                 print("3 hits on the sub!")
+                time.sleep(1)
                 self.damage(game, 3, attackerName, airAttack)
             case 11:
                 print("4 hits on the sub!")
+                time.sleep(1)
                 self.damage(game, 4, attackerName, airAttack)
             case 12:
                 print("5 hits on the sub!!")
+                time.sleep(1)
                 self.damage(game, 5, attackerName, airAttack)
             case 13 | 14 | 15 | 15 | 16 | 17 | 18 | 19 | 20:
                 print("Too much damage sir!! We're done for!")
+                time.sleep(2)
                 if airAttack:
                     gameOverText = "Sunk " + game.getFullDate() + " by catastrophic damage from a " + attackerName
                     gameover(game, gameOverText)
@@ -582,6 +597,7 @@ class Submarine():
         game.hitsTaken += numOfHits
         tookFloodingThisRound = False
         for x in range(numOfHits):
+            time.sleep(1)
             damage = self.damageChart[random.randint(0, 35)]
             match damage:
                 case "crew injury":

@@ -11,11 +11,11 @@ from util import *
 
 #TODO:
 #order in which escorts on convoy duty roll (before firing torps?)
+#career report when in port
+#patrol report?
 
 #BUGS SEEN----
-#mission loop (deploying mines)
-#did not deploy aft mines
-
+#promotion check mods don't seem to be working?
 
 
 class Game():
@@ -41,7 +41,6 @@ class Game():
                             "seventeenth", "eighteenth", "nineteenth", "twentieth", "twenty-first", "twenty-second",
                             "twenty-third", "twenty-fourth"]
         self.patrolNum = 1
-        self.sunkOnCurrentPatrol = 0
         self.missionComplete = False
         self.successfulPatrols = 0
         self.unsuccessfulPatrols = 0
@@ -67,6 +66,7 @@ class Game():
         self.firedAft = False
         self.firedDeckGun = False
         self.shipsSunk = []
+        self.shipsSunkOnCurrentPatrol = []
         self.damageDone = 0
         self.hitsTaken = 0
         self.randomEvents = 0
@@ -165,12 +165,14 @@ class Game():
             promoMods = 0
             if self.knightsCrossSinceLastPromotionCheck >= 1:
                 promoMods1 = 1
+            else:
+                promoMods1 = 0
             promoMods2 = self.shipsSunkSinceLastPromotionCheck // 10
             promoMods3 = self.unsuccessfulPatrolsSinceLastPromotionCheck
             promoMods = promoMods1 + promoMods2 + promoMods3
             print(promoMods1, promoMods2, promoMods3)
 
-            printRollandMods("Roll to be promoted (4-):", promotionRoll, promoMods,)
+            printRollandMods("Roll to be promoted (4-):", promotionRoll, promoMods)
 
             #allow player with luck to spend it for a new promotion roll
             while promotionRoll + promoMods > 4 and self.halsUndBeinbruch > 0:
@@ -614,8 +616,8 @@ class Game():
         self.portReturnText()
 
         # reset ships sunk on current patrol
-        self.shipsSunkSinceLastPromotionCheck = self.monthsSinceLastPromotionCheck + self.sunkOnCurrentPatrol
-        self.sunkOnCurrentPatrol = 0
+        self.shipsSunkSinceLastPromotionCheck += len(self.shipsSunkOnCurrentPatrol)
+        self.shipsSunkOnCurrentPatrol.clear()
 
         #refit and advance time based on damage
         refitTime = self.sub.refit(self)
@@ -756,6 +758,12 @@ class Game():
                     returnMessage = "U-" + str(self.id) + " is welcomed back to port with cheers and flowers."
         print(returnMessage)
 
+        sunkCap = False
+        for x in range (len(self.shipsSunkOnCurrentPatrol)):
+            if self.shipsSunkOnCurrentPatrol[x].type == "Capital Ship":
+                capname = self.shipsSunkOnCurrentPatrol[x].name
+                sunkCap = True
+
         if self.missionComplete:
             match flavorText2:
                 case 1 | 2:
@@ -763,8 +771,10 @@ class Game():
                         print("Great job. The successful deployment of mines on your patrol is critical to victory.")
                     elif "Abwehr" in self.currentOrders:
                         print("Well done. The delivery of our agent onto enemy shores will hinder their war effort greatly.")
-                    elif self.sunkOnCurrentPatrol > 1:
-                        print("Excellent work. Your patrol was a success, sinking", self.sunkOnCurrentPatrol, "ships!")
+                    elif sunkCap:
+                        print("The news outlets are abuzz with your glorious sinking of the", capname)
+                    elif len(self.shipsSunkOnCurrentPatrol) > 1:
+                        print("Excellent work. Your patrol was a success, sinking", len(self.shipsSunkOnCurrentPatrol), "ships!")
                     else:
                         print("Good work, we know you can do better out there, but it's still a successful patrol.")
                 case 3 | 4:
@@ -772,17 +782,21 @@ class Game():
                         print("The war effort has benefitted greatly from your successful mining of the target area.")
                     elif "Abwehr" in self.currentOrders:
                         print("Thanks to your successful mission, our agent is now able to feed us critical intelligence.")
-                    elif self.sunkOnCurrentPatrol > 1:
-                        print("A great patrol. By sinking", self.sunkOnCurrentPatrol, "ships, you've hindered the enemy's war effort drastically.")
+                    elif sunkCap:
+                        print("The sinking of the", capname, "has hurt their morale and brought you glory!")
+                    elif len(self.shipsSunkOnCurrentPatrol) > 1:
+                        print("A great patrol. By sinking", len(self.shipsSunkOnCurrentPatrol), "ships, you've hindered the enemy's war effort drastically.")
                     else:
                         print("Nice job. A single ship sunk won't help us enough but keep at it.")
                 case 5 | 6:
                     if "Mine" in self.currentOrders:
-                        print("Reports from the enemy indicate the mining of your target area was a success. Great job.")
+                        print("Reports intercepted from the enemy indicate the mining of your target area was a success. Great job.")
                     elif "Abwehr" in self.currentOrders:
                         print("We're receiving great intelligence reports from the agent you landed. Well done.")
-                    elif self.sunkOnCurrentPatrol > 1:
-                        print("With", self.sunkOnCurrentPatrol, "less enemy ships, you've hurt the enemy's capabilities to continue the war.")
+                    elif sunkCap:
+                        print("Your story of the sinking of the", capname, "fuels our propagada machine!")
+                    elif len(self.shipsSunkOnCurrentPatrol) > 1:
+                        print("With", len(self.shipsSunkOnCurrentPatrol), "less enemy ships, you've hurt the enemy's capabilities to continue the war.")
                     else:
                         print("BDU would like to see you sink more than a single ship per patrol. Get back out there and get some more.")
             self.successfulPatrols += 1
@@ -873,7 +887,7 @@ class Game():
             print("Roll for location:", loc, "-", roll)
 
         # First check if random event (natural 12)
-        if roll == 12 and randomEvent == False and loc != "Additional Round of Combat":
+        if roll == 12 and randomEvent == False and loc != "Additional Round of Combat" and loc != "Mission":
             self.encounterRandomEvent()
             self.randomEvent = True
             return "Random Event"
@@ -1222,6 +1236,7 @@ class Game():
         """When 12 is rolled for the first time on an encounter box in a patrol - roll against random event table."""
         self.randomEvents += 1
         eventroll = d6Rollx2()
+        printRollandMods("Roll for random event: ", eventroll, 0)
         match eventroll:
             case 2:
                 dead = d6Roll()
@@ -1469,6 +1484,7 @@ class Game():
         #check if lost contact from changing from night to day
         if lostthem == "Lost Them":
             print("We lost them!")
+            return "exit"
 
         #check if diesel engines were knocked out during fight
         if self.sub.dieselsInop() > 0:
@@ -1686,9 +1702,12 @@ class Game():
         else:
             if depth != "Surfaced" or previouslyDetected:
                 self.sub.printStatus()
-                if verifyYorN("Dive to test depth? ") == "Y":
-                    self.sub.diveToTestDepth(self, escortName)
-                    depth = "Test Depth"
+                if self.sub.hull_Damage == (self.sub.hull_hp - 1):
+                    print("We're unable to dive to test depth, as we fear it would be the end of us. Our hull is only just holding together.")
+                else:
+                    if verifyYorN("Dive to test depth? ") == "Y":
+                        self.sub.diveToTestDepth(self, escortName)
+                        depth = "Test Depth"
             if self.getYear() >= 1941 and range == 8:
                 escortMods = escortMods + (self.getYear() - 1940)
             if self.sub.knightsCross >= 3:
@@ -1726,7 +1745,14 @@ class Game():
             time.sleep(3)
             return "Escaped"
         if escortRoll + escortMods <= 8:
-            print("We've evaded detection!")
+            flavorText = d6Roll()
+            match flavorText:
+                case 1 | 2:
+                    print("We've evaded detection!")
+                case 3 | 4:
+                    print("We've managed to slip away!")
+                case 5 | 6:
+                    print("We've lost the escort!")
             time.sleep(2)
             return "Escaped"
         elif escortRoll + escortMods <= 11:
@@ -2196,7 +2222,7 @@ class Game():
             if ship[s].sunk:
                 print(ship[s].name, "has been sunk!")
                 self.shipsSunk.append(ship[s])
-                self.sunkOnCurrentPatrol += 1
+                self.shipsSunkOnCurrentPatrol.append(ship[s])
                 if "Minelaying" not in self.currentOrders and "Abwehr" not in self.currentOrders:
                     self.missionComplete = True
                 time.sleep(2)
@@ -2252,8 +2278,10 @@ class Game():
         self.firedDeckGun = True
         if ship[target].sunk:
             print(ship[target].name, "has been sunk!")
-            self.sunkOnCurrentPatrol += 1
+            self.shipsSunkOnCurrentPatrol.append(ship[target])
             self.shipsSunk.append(ship[target])
+            if "Minelaying" not in self.currentOrders and "Abwehr" not in self.currentOrders:
+                self.missionComplete = True
         time.sleep(2)
 
 Game()
