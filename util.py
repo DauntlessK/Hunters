@@ -80,26 +80,6 @@ def getInputNum(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100, secondPrompt = ""
         else:
             return inp
 
-def getInputNumNoSecondPrompt(prompt, minINCLUSIVE = -1, maxINCLUSIVE = 100):
-    invalidInput = True
-    while invalidInput:
-        print(prompt, end="")
-        inp = input()
-        if inp == "?":
-            helpText(prompt)
-            continue
-        try:
-            inp = int(inp)
-        except:
-            print("Invalid input. Enter a number.")
-            continue
-        if inp < minINCLUSIVE:
-            print("Must be greater than or equal to", minINCLUSIVE)
-        elif inp > maxINCLUSIVE:
-            print("Must be less than or equal to", maxINCLUSIVE)
-        else:
-            return inp
-
 def Escorted(ships):
     """Returns true if the list of ships passed has an escort (as its first ship)"""
     if ships[0].type == "Escort":

@@ -25,7 +25,7 @@ def mainMenu():
     print("You can type a question mark (?) in any prompt instead to get a few helpful, relevant explanations.")
     time.sleep(3)
     print("===========================================")
-    act = getInputNumNoSecondPrompt("1) Play Game\n2) High Scores", 1, 2)
+    act = getInputNum("1) Play Game\n2) High Scores", 1, 2)
     if act == 1:
         Game()
     elif act == 2:
@@ -1869,7 +1869,6 @@ class Game():
         else:
             deckGunAvail = False
 
-        #TODO check attack availabilty first, then print options0
         if bowSalvoAvail == False and aftSalvoAvail == False and deckGunAvail == False:
             return "exitAttack"
 
