@@ -25,7 +25,7 @@ def mainMenu():
     print("You can type a question mark (?) in any prompt instead to get a few helpful, relevant explanations.")
     time.sleep(3)
     print("===========================================")
-    act = getInputNum("1) Play Game\n2) High Scores", 1, 2)
+    act = getInputNumNoSecondPrompt("1) Play Game\n2) High Scores", 1, 2)
     if act == 1:
         Game()
     elif act == 2:
